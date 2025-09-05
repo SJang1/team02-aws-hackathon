@@ -121,7 +121,7 @@ class AWSOptimizer:
         """1단계: 재해상황 대비 필수 AWS 서비스 목록 추출"""
         try:
             bedrock_prompt = f"""
-            재해상황 대비 AWS 아키텍처 설계 요청:
+            AWS 아키텍처 설계 요청:
             - 서비스 유형: {service_type}
             - 예상 사용자 수: {users}
             - 성능 요구사항: {performance}
@@ -130,6 +130,10 @@ class AWSOptimizer:
             
             갑작스러운 트래픽 급증(10-100배), DDoS 공격, 서버 장애 등 재해상황에 대비한 AWS 서비스 조합을 추천해주세요.
             다음 서비스들을 우선적으로 고려하되, 한정하지 말고, 사용자가 필요한 서비스를 추가하세요:
+
+            가격은 고려 말고 필요할 거 같은 모든 서비스를 나열해 주세요!
+
+            
             - AmazonCloudFront (CDN, DDoS 보호)
             - AWSWAF (웹 방화벽)
             - ElasticLoadBalancingV2 (로드밸런싱)
