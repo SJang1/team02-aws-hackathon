@@ -46,18 +46,33 @@ def get_rds_info():
         return None
 
 def get_rds_password_from_secrets():
-    """Try to get RDS password from AWS Secrets Manager or Parameter Store"""
+    """Try to get RDS password from multiple sources"""
+    # Try Parameter Store first
     try:
-        # Try AWS Systems Manager Parameter Store first
         ssm_client = boto3.client('ssm', region_name='us-east-1')
         response = ssm_client.get_parameter(
             Name='/team02-hackathon/rds/password',
             WithDecryption=True
         )
+        print("Retrieved password from Parameter Store")
         return response['Parameter']['Value']
     except Exception as e:
-        print(f"Could not get password from Parameter Store: {e}")
-        return None
+        print(f"Parameter Store failed: {e}")
+    
+    # Try to read from local terraform state as fallback
+    try:
+        import subprocess
+        import json
+        result = subprocess.run(['terraform', 'output', '-json', 'database_password'], 
+                              cwd='/home/ec2-user/terraform', capture_output=True, text=True)
+        if result.returncode == 0:
+            password = json.loads(result.stdout)['value']
+            print("Retrieved password from Terraform state")
+            return password
+    except Exception as e:
+        print(f"Terraform state read failed: {e}")
+    
+    return None
 
 def get_db_connection():
     import time
@@ -77,7 +92,9 @@ def get_db_connection():
         password = get_rds_password_from_secrets()
         if password:
             RDS_CONFIG['password'] = password
-            print("Retrieved RDS password from AWS Parameter Store")
+        else:
+            print("❌ Could not retrieve RDS password from any source")
+            return None
     
     for attempt in range(max_retries):
         try:

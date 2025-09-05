@@ -402,8 +402,9 @@ NGINX_EOF
               git clone ${var.git_repo_url} repo || \
               echo "Repository clone failed, creating placeholder files"
               
-              # RDS will be auto-discovered by the application
-              echo "RDS auto-discovery enabled - application will connect automatically"
+              # Set RDS password as environment variable for the application
+              echo "export RDS_PASSWORD='${random_password.db_password.result}'" >> /home/ec2-user/.bashrc
+              export RDS_PASSWORD='${random_password.db_password.result}'
               
               # Install Python and dependencies
               yum install -y python3 python3-pip
@@ -414,8 +415,8 @@ NGINX_EOF
                 chmod +x start_servers.sh
                 chmod +x test_rds_connection.py 2>/dev/null || true
                 
-                # Start servers (RDS will be auto-discovered)
-                nohup ./start_servers.sh > /home/ec2-user/server.log 2>&1 &
+                # Start servers with RDS password
+                RDS_PASSWORD='${random_password.db_password.result}' nohup ./start_servers.sh > /home/ec2-user/server.log 2>&1 &
               else
                 # Fallback: create simple test server
                 pip3 install flask pymysql cryptography boto3
