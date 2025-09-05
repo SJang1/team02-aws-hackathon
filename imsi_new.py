@@ -44,6 +44,10 @@ def init_db():
             print("Running in fallback mode without database")
             return
         cursor = conn.cursor()
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        return
+    
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS requests (
@@ -69,13 +73,9 @@ def init_db():
         )
     ''')
         
-        conn.commit()
-        conn.close()
-        print("Database initialized successfully")
-    except Exception as e:
-        print(f"Database initialization failed: {e}")
-
-init_db()
+    conn.commit()
+    conn.close()
+    print("Database initialized successfully")
 
 class AWSOptimizer:
     def __init__(self):
@@ -691,4 +691,5 @@ def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=5000)
