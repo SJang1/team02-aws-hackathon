@@ -18,9 +18,12 @@ class AWSOptimizer:
     def __init__(self):
         self.pricing_cache = {}
         self.fallback_costs = {
-            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34},
-            'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60},
+            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34, 't3.medium': 38, 't3.large': 76},
+            'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
+            'RDS_READ_REPLICA': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
             'S3': {'standard': 23, 'intelligent_tiering': 23},
+            'ALB': {'application': 22},
+            'SageMaker': {'ml.t3.medium': 45},
             'Lambda': {'requests': 0.2, 'gb_seconds': 16.67}
         }
     
@@ -182,36 +185,122 @@ class AWSOptimizer:
         
         # 서비스 유형 처리 (기타 옵션 포함)
         if service_type in ['웹사이트', 'API'] or any(word in service_type.lower() for word in ['web', 'api', '웹', '사이트']):
-            if user_scale == 'small':
+            # 사용자 규모에 따른 EC2 인스턴스 선택
+            if user_scale == 'small':  # 1-100명
                 ec2_type = 't2.micro'
-            elif user_scale == 'medium':
+                instance_count = 1
+            elif user_scale == 'medium':  # 100-1,000명
                 ec2_type = 't2.small'
-            elif user_scale == 'large':
+                instance_count = 1
+            elif user_scale == 'large':  # 1,000-10,000명
                 ec2_type = 't2.medium'
-            else:
-                ec2_type = 't3.medium'
+                instance_count = 2  # 로드 밸런싱을 위한 다중 인스턴스
+            else:  # 엔터프라이즈 10,000명+
+                ec2_type = 't3.large'
+                instance_count = 3
             
-            if performance in ['고성능', '최고성능'] and ec2_type == 't2.micro':
-                ec2_type = 't2.small'
+            # 성능 요구사항에 따른 인스턴스 업그레이드
+            if performance in ['고성능', '최고성능']:
+                if ec2_type == 't2.micro':
+                    ec2_type = 't2.small'
+                elif ec2_type == 't2.small':
+                    ec2_type = 't2.medium'
+                elif ec2_type == 't2.medium':
+                    ec2_type = 't3.medium'
             
-            services.append({"name": "EC2", "type": ec2_type, "quantity": 1, "reason": "웹서버/API서버"})
+            services.append({
+                "name": "EC2", 
+                "type": ec2_type, 
+                "quantity": instance_count, 
+                "reason": f"웹서버/API서버 ({users} 사용자 대응)"
+            })
             
+            # 로드 밸런서 추가 (대규모 이상)
+            if user_scale in ['large', 'enterprise']:
+                services.append({
+                    "name": "ALB", 
+                    "type": "application", 
+                    "quantity": 1, 
+                    "reason": "로드 밸런싱 및 고가용성"
+                })
+            
+            # 데이터베이스 추가 (사용자 규모에 따른 크기 조정)
             if '데이터베이스' in additional_info or service_type == '웹사이트':
-                rds_type = 'db.t3.micro' if user_scale == 'small' else 'db.t3.small'
-                services.append({"name": "RDS", "type": rds_type, "quantity": 1, "reason": "데이터베이스"})
+                if user_scale == 'small':
+                    rds_type = 'db.t3.micro'
+                elif user_scale == 'medium':
+                    rds_type = 'db.t3.small'
+                elif user_scale == 'large':
+                    rds_type = 'db.t3.medium'
+                else:  # enterprise
+                    rds_type = 'db.t3.large'
+                
+                services.append({
+                    "name": "RDS", 
+                    "type": rds_type, 
+                    "quantity": 1, 
+                    "reason": f"데이터베이스 ({users} 사용자 대응)"
+                })
         
         elif service_type == '데이터베이스' or 'database' in service_type.lower() or 'db' in service_type.lower():
+            # 사용자 규모에 따른 데이터베이스 크기 선택
             if user_scale == 'small':
                 rds_type = 'db.t3.micro'
+                read_replicas = 0
             elif user_scale == 'medium':
                 rds_type = 'db.t3.small'
-            else:
+                read_replicas = 1
+            elif user_scale == 'large':
                 rds_type = 'db.t3.medium'
-            services.append({"name": "RDS", "type": rds_type, "quantity": 1, "reason": "메인 데이터베이스"})
+                read_replicas = 2
+            else:  # enterprise
+                rds_type = 'db.t3.large'
+                read_replicas = 3
+            
+            services.append({
+                "name": "RDS", 
+                "type": rds_type, 
+                "quantity": 1, 
+                "reason": f"메인 데이터베이스 ({users} 사용자 대응)"
+            })
+            
+            # 읽기 전용 복제본 추가 (중간규모 이상)
+            if read_replicas > 0:
+                services.append({
+                    "name": "RDS_READ_REPLICA", 
+                    "type": rds_type, 
+                    "quantity": read_replicas, 
+                    "reason": f"읽기 성능 향상을 위한 복제본"
+                })
         
         elif service_type == '머신러닝' or any(word in service_type.lower() for word in ['ml', 'ai', 'machine', 'learning']):
-            services.append({"name": "EC2", "type": 't3.medium', "quantity": 1, "reason": "ML 워크로드"})
-            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "데이터 저장소"})
+            # ML 워크로드는 사용자 수보다 데이터 처리량에 따라 결정
+            if user_scale in ['small', 'medium']:
+                ec2_type = 't3.medium'
+            else:
+                ec2_type = 't3.large'
+            
+            services.append({
+                "name": "EC2", 
+                "type": ec2_type, 
+                "quantity": 1, 
+                "reason": f"ML 워크로드 ({users} 사용자 대응)"
+            })
+            services.append({
+                "name": "S3", 
+                "type": "standard", 
+                "quantity": 1, 
+                "reason": "ML 데이터 저장소"
+            })
+            
+            # 대규모 ML 워크로드에 SageMaker 추가
+            if user_scale in ['large', 'enterprise']:
+                services.append({
+                    "name": "SageMaker", 
+                    "type": "ml.t3.medium", 
+                    "quantity": 1, 
+                    "reason": "대규모 ML 모델 학습 및 배포"
+                })
         
         elif service_type == '스토리지' or any(word in service_type.lower() for word in ['storage', 'file', '파일', '저장']):
             services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "파일 저장소"})
@@ -253,8 +342,11 @@ class AWSOptimizer:
     
     def _find_cheaper_option(self, service_name, remaining_budget, region):
         options = {
-            'EC2': ['t2.nano', 't2.micro', 't2.small'],
-            'RDS': ['db.t3.micro', 'db.t3.small']
+            'EC2': ['t2.nano', 't2.micro', 't2.small', 't2.medium'],
+            'RDS': ['db.t3.micro', 'db.t3.small', 'db.t3.medium'],
+            'RDS_READ_REPLICA': ['db.t3.micro', 'db.t3.small', 'db.t3.medium'],
+            'ALB': ['application'],
+            'SageMaker': ['ml.t3.medium']
         }
         
         if service_name not in options:
@@ -340,10 +432,10 @@ def process_optimization(request_uuid, service_type, users, performance, additio
 def create_optimization():
     data = request.json
     
-    service_type = data.get('service_type', '')
-    users = data.get('users', '소규모')
-    performance = data.get('performance', '기본')
-    additional_info = data.get('additional_info', '')
+    service_type = data.get('serviceType', '')
+    users = data.get('expectedUsers', '선택안됨')
+    performance = data.get('performance', '선택안됨')
+    additional_info = data.get('additionalInfo', '정보없음')
     budget = float(data.get('budget', 100))
     region = data.get('region', 'us-east-1')
     
