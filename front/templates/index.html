@@ -23,8 +23,25 @@
         .mobile-nav-links li { padding: 0.5rem 2rem; }
         .mobile-nav-links .nav-link { display: block; padding: 0.75rem 0; border-radius: 0; }
         
-        .tab-content { display: none; padding-top: 80px; }
-        .tab-content.active { display: block; }
+        .tab-content { 
+            display: none; 
+            padding-top: 80px;
+        }
+        .tab-content.active { 
+            display: block;
+        }
+        .tab-content > * {
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .tab-content.active > * {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .tab-content.fade-out > * {
+            display: none;
+        }
         
         .hero { text-align: center; padding: 4rem 2rem; color: white; }
         .hero h1 { font-size: 3rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
@@ -109,12 +126,116 @@
         .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.3s; }
         .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
         
-        .loading { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; color: white; display: none; text-align: center; }
-        .result { margin-top: 2rem; padding: 2rem; border-radius: 16px; color: white; display: none; }
+        .loading { 
+            margin-top: 2rem; 
+            padding: 2rem; 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            border-radius: 16px; 
+            color: white; 
+            display: none; 
+            text-align: center;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .loading.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .result { 
+            margin-top: 2rem; 
+            padding: 2rem; 
+            border-radius: 16px; 
+            color: white; 
+            display: none;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .result.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
         .result.success { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
         .result.error { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
-        .service-item { background: rgba(255,255,255,0.1); margin: 0.5rem 0; padding: 1rem; border-radius: 8px; }
-        .cost-summary { background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+        .architecture-diagram {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            gap: 2rem;
+            margin: 2rem 0;
+        }
+        .service-layer {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            gap: 2rem;
+            flex-wrap: wrap;
+        }
+        .service-block {
+            background: rgba(255,255,255,0.15);
+            border: 2px solid rgba(255,255,255,0.3);
+            border-radius: 12px;
+            padding: 1.5rem;
+            text-align: center;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            min-width: 150px;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .service-block:hover {
+            background: rgba(255,255,255,0.25);
+            border-color: #4CAF50;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        }
+        .service-block.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .service-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+            color: #4CAF50;
+        }
+        .service-name {
+            font-weight: bold;
+            margin-bottom: 0.5rem;
+        }
+        .service-type {
+            font-size: 0.9rem;
+            opacity: 0.8;
+            margin-bottom: 0.5rem;
+        }
+        .service-cost {
+            font-size: 0.85rem;
+            color: #FFD700;
+        }
+        .connection-arrow {
+            font-size: 1.5rem;
+            color: rgba(255,255,255,0.6);
+            margin: 0 1rem;
+        }
+        .layer-label {
+            font-size: 0.9rem;
+            opacity: 0.7;
+            margin-bottom: 1rem;
+        }
+        .cost-summary { 
+            background: rgba(255,255,255,0.2); 
+            padding: 1rem; 
+            border-radius: 8px; 
+            margin-top: 1rem;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .cost-summary.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
@@ -319,32 +440,19 @@
                         <li><i class="fas fa-check"></i> AI 기반 서비스 추천</li>
                         <li><i class="fas fa-check"></i> 월 5회 분석</li>
                         <li class="unavailable"><i class="fas fa-times"></i> 사용량 측정 보고서</li>
-                        <li class="unavailable"><i class="fas fa-times"></i> 자동 관리</li>
+                        <li class="unavailable"><i class="fas fa-times"></i> 우선 지원</li>
                     </ul>
                 </div>
                 
-                <div class="pricing-card standard" onclick="selectPlan('standard', 'Standard', '$29')">
+                <div class="pricing-card pro" onclick="selectPlan('pro', 'Pro', '$29')">
                     <div class="plan-demo">DEMO</div>
-                    <div class="plan-name">Standard</div>
+                    <div class="plan-name">Pro</div>
                     <div class="plan-price">$29<span style="font-size: 1rem;">/월</span></div>
                     <ul class="plan-features">
                         <li><i class="fas fa-check"></i> 모든 Free 기능</li>
                         <li><i class="fas fa-check"></i> 사용량 측정 및 분석</li>
                         <li><i class="fas fa-check"></i> 상세 보고서 제작</li>
                         <li><i class="fas fa-check"></i> 월 50회 분석</li>
-                        <li class="unavailable"><i class="fas fa-times"></i> 자동 관리 (미구현)</li>
-                    </ul>
-                </div>
-                
-                <div class="pricing-card pro" onclick="selectPlan('pro', 'Pro', '$99')">
-                    <div class="plan-demo">DEMO</div>
-                    <div class="plan-name">Pro</div>
-                    <div class="plan-price">$99<span style="font-size: 1rem;">/월</span></div>
-                    <ul class="plan-features">
-                        <li><i class="fas fa-check"></i> 모든 Standard 기능</li>
-                        <li><i class="fas fa-check"></i> 자동 인프라 관리 (미구현)</li>
-                        <li><i class="fas fa-check"></i> 24/7 모니터링</li>
-                        <li><i class="fas fa-check"></i> 무제한 분석</li>
                         <li><i class="fas fa-check"></i> 우선 지원</li>
                     </ul>
                 </div>
@@ -449,7 +557,6 @@
                 const planBadge = document.querySelector('.plan-badge');
                 planBadge.textContent = `${selectedPlan.name} 요금제`;
                 planBadge.style.background = selectedPlan.type === 'free' ? '#4CAF50' : 
-                                           selectedPlan.type === 'standard' ? '#FF9800' : 
                                            'linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7)';
                 
                 currentPlan = selectedPlan.type;
@@ -494,25 +601,40 @@
             mobileNav.classList.remove('show');
         }
         
-        // 탭 전환 함수
+        // 탭 전환 함수 (즉시 사라짐, 부드러운 등장)
         function showTab(tabName) {
-            // 모든 탭 숨기기
-            document.querySelectorAll('.tab-content').forEach(tab => {
-                tab.classList.remove('active');
-            });
+            const currentTab = document.querySelector('.tab-content.active');
+            const newTab = document.getElementById(tabName + '-tab');
             
-            // 모든 네비게이션 링크 비활성화 (데스크톱 + 모바일)
+            if (currentTab === newTab) return;
+            
+            // 현재 탭 즉시 사라짐
+            if (currentTab) {
+                currentTab.classList.remove('active');
+            }
+            
+            // 네비게이션 업데이트
             document.querySelectorAll('.nav-link').forEach(link => {
                 link.classList.remove('active');
             });
-            
-            // 선택된 탭 보이기
-            document.getElementById(tabName + '-tab').classList.add('active');
-            
-            // 선택된 네비게이션 링크 활성화 (데스크톱 + 모바일)
             document.querySelectorAll(`[onclick*="showTab('${tabName}')"]`).forEach(link => {
                 link.classList.add('active');
             });
+            
+            // 새 탭 표시 및 순차적 애니메이션
+            newTab.classList.add('active');
+            
+            const elements = newTab.children;
+            Array.from(elements).forEach((element, index) => {
+                element.style.transitionDelay = `${index * 0.1}s`;
+            });
+            
+            // 애니메이션 완료 후 딜레이 리셋
+            setTimeout(() => {
+                Array.from(elements).forEach(element => {
+                    element.style.transitionDelay = '0s';
+                });
+            }, elements.length * 100 + 500);
         }
         
         // 커스텀 입력 토글 함수
@@ -646,25 +768,52 @@
         });
         
         function showLoading() {
-            document.getElementById('loading').style.display = 'block';
-            document.getElementById('result').style.display = 'none';
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            result.style.display = 'none';
+            result.classList.remove('show');
+            
+            loading.style.display = 'block';
+            setTimeout(() => loading.classList.add('show'), 50);
             
             // 팁 로테이션 시작
             showRandomTip();
-            tipInterval = setInterval(showRandomTip, 3000); // 3초마다 팁 변경
+            tipInterval = setInterval(showRandomTip, 3000);
         }
         
         function showResult(content, isSuccess = true) {
-            // 팁 로테이션 중지
             if (tipInterval) {
                 clearInterval(tipInterval);
             }
             
-            document.getElementById('loading').style.display = 'none';
+            const loading = document.getElementById('loading');
             const resultDiv = document.getElementById('result');
+            
+            // 로딩 숨기기
+            loading.classList.remove('show');
+            setTimeout(() => loading.style.display = 'none', 300);
+            
+            // 결과 표시
             resultDiv.className = isSuccess ? 'result success' : 'result error';
             resultDiv.style.display = 'block';
             document.getElementById('result-content').innerHTML = content;
+            
+            setTimeout(() => {
+                resultDiv.classList.add('show');
+                
+                // 서비스 블록들 순차 애니메이션
+                const serviceBlocks = resultDiv.querySelectorAll('.service-block');
+                serviceBlocks.forEach((block, index) => {
+                    setTimeout(() => block.classList.add('show'), index * 150);
+                });
+                
+                // 비용 요약 애니메이션
+                const costSummary = resultDiv.querySelector('.cost-summary');
+                if (costSummary) {
+                    setTimeout(() => costSummary.classList.add('show'), serviceItems.length * 100 + 200);
+                }
+            }, 400);
         }
         
         function showError(message) {
@@ -684,14 +833,7 @@
                 if (data.status === 'completed') {
                     if (data.feasible) {
                         let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
-                        content += '<div class="services-list">';
-                        data.services.forEach(service => {
-                            content += `<div class="service-item">`;
-                            content += `<strong>${service.name}</strong> (${service.type})`;
-                            content += `<br><span>$${service.monthly_cost}/월 - ${service.reason}</span>`;
-                            content += `</div>`;
-                        });
-                        content += '</div>';
+                        content += generateArchitectureDiagram(data.services);
                         content += `<div class="cost-summary">`;
                         content += `<h4>비용 요약</h4>`;
                         content += `<p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
@@ -709,6 +851,119 @@
             } catch (error) {
                 showError('폴링 오류');
             }
+        }
+        
+        // AWS 서비스 링크 매핑
+        const awsServiceLinks = {
+            'EC2': 'https://aws.amazon.com/ec2/',
+            'RDS': 'https://aws.amazon.com/rds/',
+            'S3': 'https://aws.amazon.com/s3/',
+            'Lambda': 'https://aws.amazon.com/lambda/',
+            'ALB': 'https://aws.amazon.com/elasticloadbalancing/',
+            'CloudFront': 'https://aws.amazon.com/cloudfront/',
+            'SageMaker': 'https://aws.amazon.com/sagemaker/',
+            'DynamoDB': 'https://aws.amazon.com/dynamodb/',
+            'ElastiCache': 'https://aws.amazon.com/elasticache/',
+            'VPC': 'https://aws.amazon.com/vpc/'
+        };
+        
+        // 서비스 아이콘 매핑
+        const serviceIcons = {
+            'EC2': 'fas fa-server',
+            'RDS': 'fas fa-database',
+            'S3': 'fas fa-hdd',
+            'Lambda': 'fas fa-bolt',
+            'ALB': 'fas fa-balance-scale',
+            'CloudFront': 'fas fa-globe',
+            'SageMaker': 'fas fa-brain',
+            'DynamoDB': 'fas fa-table',
+            'ElastiCache': 'fas fa-memory',
+            'VPC': 'fas fa-network-wired'
+        };
+        
+        // 아키텍처 다이어그램 생성 함수
+        function generateArchitectureDiagram(services) {
+            // 서비스를 레이어별로 분류
+            const layers = {
+                'frontend': [],
+                'compute': [],
+                'database': [],
+                'storage': [],
+                'network': []
+            };
+            
+            services.forEach(service => {
+                const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
+                if (['CloudFront', 'ALB'].includes(serviceName)) {
+                    layers.network.push(service);
+                } else if (['EC2', 'Lambda', 'SageMaker'].includes(serviceName)) {
+                    layers.compute.push(service);
+                } else if (['RDS', 'DynamoDB', 'ElastiCache'].includes(serviceName)) {
+                    layers.database.push(service);
+                } else if (['S3'].includes(serviceName)) {
+                    layers.storage.push(service);
+                } else {
+                    layers.compute.push(service);
+                }
+            });
+            
+            let diagram = '<div class="architecture-diagram">';
+            
+            // 네트워크 레이어
+            if (layers.network.length > 0) {
+                diagram += '<div class="layer-label">네트워크 레이어</div>';
+                diagram += '<div class="service-layer">';
+                layers.network.forEach(service => {
+                    diagram += generateServiceBlock(service);
+                });
+                diagram += '</div>';
+                diagram += '<div class="connection-arrow"><i class="fas fa-arrow-down"></i></div>';
+            }
+            
+            // 컴퓨트 레이어
+            if (layers.compute.length > 0) {
+                diagram += '<div class="layer-label">컴퓨트 레이어</div>';
+                diagram += '<div class="service-layer">';
+                layers.compute.forEach(service => {
+                    diagram += generateServiceBlock(service);
+                });
+                diagram += '</div>';
+                if (layers.database.length > 0 || layers.storage.length > 0) {
+                    diagram += '<div class="connection-arrow"><i class="fas fa-arrow-down"></i></div>';
+                }
+            }
+            
+            // 데이터베이스 및 스토리지 레이어
+            if (layers.database.length > 0 || layers.storage.length > 0) {
+                diagram += '<div class="layer-label">데이터 레이어</div>';
+                diagram += '<div class="service-layer">';
+                layers.database.forEach(service => {
+                    diagram += generateServiceBlock(service);
+                });
+                layers.storage.forEach(service => {
+                    diagram += generateServiceBlock(service);
+                });
+                diagram += '</div>';
+            }
+            
+            diagram += '</div>';
+            return diagram;
+        }
+        
+        // 서비스 블록 생성 함수
+        function generateServiceBlock(service) {
+            const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
+            const icon = serviceIcons[serviceName] || 'fas fa-cube';
+            const link = awsServiceLinks[serviceName] || '#';
+            
+            return `
+                <div class="service-block" onclick="window.open('${link}', '_blank')">
+                    <div class="service-icon"><i class="${icon}"></i></div>
+                    <div class="service-name">${serviceName}</div>
+                    <div class="service-type">${service.type}</div>
+                    <div class="service-cost">$${service.monthly_cost}/월</div>
+                </div>
+            `;
         }
         
         // 페이지 로드 시 Free 요금제 기본 선택
