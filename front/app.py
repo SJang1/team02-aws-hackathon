@@ -32,5 +32,18 @@ def get_status(request_uuid):
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
+@app.route('/contact', methods=['POST'])
+def contact():
+    data = request.json
+    
+    # imsi.py 백엔드로 문의 요청 전달
+    try:
+        response = requests.post(f'{BACKEND_URL}/contact', 
+                               json=data, 
+                               timeout=10)
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=8080, debug=True)
