@@ -1,0 +1,6 @@
+aws_region    = "us-east-1"
+project_name  = "team02-hackathon"
+instance_type = "t3.micro"
+public_key    = ""  # Leave empty to auto-generate key pair
+environment   = "dev"
+git_repo_url  = "https://github.com/your-username/team02-aws-hackathon.git"

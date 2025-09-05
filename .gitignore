@@ -1,9 +1,25 @@
-# Python
+# Terraform files
+terraform/*.tfstate
+terraform/*.tfstate.*
+terraform/.terraform/
+terraform/.terraform.lock.hcl
+terraform/terraform.tfvars
+terraform/*.tfplan
+terraform/*.pem
+
 __pycache__/
 *.py[cod]
 *$py.class
 *.so
 .Python
+env/
+venv/
+ENV/
+env.bak/
+venv.bak/
+
+# IDE files
+
 build/
 develop-eggs/
 dist/
@@ -42,6 +58,12 @@ instance/
 *.swp
 *.swo
 
+# OS files
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
 # OS
 .DS_Store
 Thumbs.db
