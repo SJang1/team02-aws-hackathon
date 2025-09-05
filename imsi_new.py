@@ -12,6 +12,7 @@ app = Flask(__name__)
 # AWS 클라이언트
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 pricing_client = boto3.client('pricing', region_name='us-east-1')
+rds_client = boto3.client('rds', region_name='us-east-1')
 
 # RDS 설정
 RDS_CONFIG = {
@@ -23,16 +24,40 @@ RDS_CONFIG = {
     'charset': 'utf8mb4'
 }
 
+# 메모리 저장소 (폴백)
+memory_storage = {}
+
+def get_rds_info():
+    try:
+        response = rds_client.describe_db_instances()
+        for db in response['DBInstances']:
+            if db['DBInstanceStatus'] == 'available':
+                print(f"RDS Status: {db['DBInstanceStatus']}")
+                print(f"RDS Endpoint: {db['Endpoint']['Address']}")
+                return db['Endpoint']['Address'], db['Endpoint']['Port']
+        return None, None
+    except Exception as e:
+        print(f"Failed to get RDS info: {e}")
+        return None, None
+
 def get_db_connection():
     import time
-    max_retries = 5
+    max_retries = 3
+    
+    # Get RDS info first
+    endpoint, port = get_rds_info()
+    if endpoint:
+        RDS_CONFIG['host'] = endpoint
+        RDS_CONFIG['port'] = port
+    
     for attempt in range(max_retries):
         try:
+            print(f"Connecting to RDS: {RDS_CONFIG['host']}:{RDS_CONFIG['port']}")
             return pymysql.connect(**RDS_CONFIG)
         except Exception as e:
             print(f"RDS connection attempt {attempt + 1} failed: {e}")
             if attempt < max_retries - 1:
-                time.sleep(10)
+                time.sleep(5)
             else:
                 print("RDS connection failed, using fallback mode")
                 return None
@@ -544,7 +569,14 @@ def store_request(request_uuid, request_data, response_data=None, status='pendin
     try:
         conn = get_db_connection()
         if not conn:
-            print(f"Fallback: Request {request_uuid} not stored (no DB connection)")
+            # 메모리 저장소 사용
+            memory_storage[request_uuid] = {
+                'request_data': request_data,
+                'response_data': response_data,
+                'status': status,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            print(f"Stored in memory: {request_uuid}")
             return
         cursor = conn.cursor()
         
@@ -561,12 +593,22 @@ def store_request(request_uuid, request_data, response_data=None, status='pendin
         conn.close()
     except Exception as e:
         print(f"Database store failed: {e}")
+        # 메모리 저장소 사용
+        memory_storage[request_uuid] = {
+            'request_data': request_data,
+            'response_data': response_data,
+            'status': status,
+            'created_at': datetime.utcnow().isoformat()
+        }
 
 def get_request(request_uuid):
     try:
         conn = get_db_connection()
         if not conn:
-            return {'status': 'processing', 'message': 'Database unavailable'}
+            # 메모리 저장소에서 검색
+            if request_uuid in memory_storage:
+                return memory_storage[request_uuid]
+            return {'status': 'not_found'}
         cursor = conn.cursor(pymysql.cursors.DictCursor)
         
         cursor.execute('SELECT * FROM requests WHERE uuid = %s', (request_uuid,))
@@ -582,6 +624,9 @@ def get_request(request_uuid):
         return result
     except Exception as e:
         print(f"Database get failed: {e}")
+        # 메모리 저장소에서 검색
+        if request_uuid in memory_storage:
+            return memory_storage[request_uuid]
         return {'status': 'error', 'message': 'Database error'}
 
 def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
