@@ -33,75 +33,124 @@ class AWSOptimizer:
             return self.pricing_cache[cache_key]
         
         try:
-            if service == 'EC2':
-                price = self._get_ec2_price(instance_type, region)
-            elif service == 'RDS':
-                price = self._get_rds_price(instance_type, region)
-            else:
-                price = self.fallback_costs.get(service, {}).get(instance_type, 50)
-            
+            price = self._get_aws_service_price(service, instance_type, region)
             self.pricing_cache[cache_key] = price
             return price
-        except:
+        except Exception as e:
+            print(f"Pricing API failed for {service} {instance_type}: {e}")
             fallback = self.fallback_costs.get(service, {}).get(instance_type, 50)
             self.pricing_cache[cache_key] = fallback
             return fallback
     
-    def _get_ec2_price(self, instance_type, region):
+    def _get_aws_service_price(self, service, instance_type, region):
         location_map = {
             'us-east-1': 'US East (N. Virginia)',
             'us-west-2': 'US West (Oregon)',
-            'ap-northeast-2': 'Asia Pacific (Seoul)'
+            'ap-northeast-2': 'Asia Pacific (Seoul)',
+            'eu-west-1': 'Europe (Ireland)',
+            'ap-southeast-1': 'Asia Pacific (Singapore)'
         }
         
+        # 서비스별 설정
+        service_configs = {
+            'EC2': {
+                'ServiceCode': 'AmazonEC2',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'},
+                    {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'},
+                    {'Type': 'TERM_MATCH', 'Field': 'preInstalledSw', 'Value': 'NA'}
+                ]
+            },
+            'RDS': {
+                'ServiceCode': 'AmazonRDS',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'},
+                    {'Type': 'TERM_MATCH', 'Field': 'deploymentOption', 'Value': 'Single-AZ'}
+                ]
+            },
+            'RDS_READ_REPLICA': {
+                'ServiceCode': 'AmazonRDS',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'}
+                ]
+            },
+            'ALB': {
+                'ServiceCode': 'AWSELB',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Load Balancer-Application'}
+                ]
+            },
+            'SageMaker': {
+                'ServiceCode': 'AmazonSageMaker',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type}
+                ]
+            },
+            'S3': {
+                'ServiceCode': 'AmazonS3',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'storageClass', 'Value': 'General Purpose'}
+                ]
+            },
+            'Lambda': {
+                'ServiceCode': 'AWSLambda',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'group', 'Value': 'AWS-Lambda-Requests'}
+                ]
+            },
+            'CloudFront': {
+                'ServiceCode': 'AmazonCloudFront',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Data Transfer'}
+                ]
+            }
+        }
+        
+        if service not in service_configs:
+            return self.fallback_costs.get(service, {}).get(instance_type, 50)
+        
+        config = service_configs[service]
+        filters = config['filters'].copy()
+        
+        # 위치 필터 추가
+        filters.append({
+            'Type': 'TERM_MATCH', 
+            'Field': 'location', 
+            'Value': location_map.get(region, 'US East (N. Virginia)')
+        })
+        
         response = pricing_client.get_products(
-            ServiceCode='AmazonEC2',
-            Filters=[
-                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
-                {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'},
-                {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'}
-            ]
+            ServiceCode=config['ServiceCode'],
+            Filters=filters
         )
         
         if response['PriceList']:
             price_data = json.loads(response['PriceList'][0])
-            terms = price_data['terms']['OnDemand']
-            for term_key in terms:
-                price_dimensions = terms[term_key]['priceDimensions']
-                for pd_key in price_dimensions:
-                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
-                    return hourly_price * 24 * 30
+            
+            # OnDemand 가격 추출
+            if 'terms' in price_data and 'OnDemand' in price_data['terms']:
+                terms = price_data['terms']['OnDemand']
+                for term_key in terms:
+                    price_dimensions = terms[term_key]['priceDimensions']
+                    for pd_key in price_dimensions:
+                        price_per_unit = price_dimensions[pd_key]['pricePerUnit']['USD']
+                        if price_per_unit and float(price_per_unit) > 0:
+                            hourly_price = float(price_per_unit)
+                            
+                            # 서비스별 월 비용 계산
+                            if service in ['EC2', 'RDS', 'RDS_READ_REPLICA', 'SageMaker']:
+                                return hourly_price * 24 * 30  # 시간당 → 월
+                            elif service == 'ALB':
+                                return hourly_price * 24 * 30 + 22.5  # ALB 기본 요금
+                            elif service == 'S3':
+                                return hourly_price * 1000  # GB당 → 월 (1TB 기준)
+                            else:
+                                return hourly_price * 24 * 30
         
-        return self.fallback_costs['EC2'].get(instance_type, 50)
-    
-    def _get_rds_price(self, instance_type, region):
-        location_map = {
-            'us-east-1': 'US East (N. Virginia)',
-            'us-west-2': 'US West (Oregon)',
-            'ap-northeast-2': 'Asia Pacific (Seoul)'
-        }
-        
-        response = pricing_client.get_products(
-            ServiceCode='AmazonRDS',
-            Filters=[
-                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
-                {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'},
-                {'Type': 'TERM_MATCH', 'Field': 'deploymentOption', 'Value': 'Single-AZ'}
-            ]
-        )
-        
-        if response['PriceList']:
-            price_data = json.loads(response['PriceList'][0])
-            terms = price_data['terms']['OnDemand']
-            for term_key in terms:
-                price_dimensions = terms[term_key]['priceDimensions']
-                for pd_key in price_dimensions:
-                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
-                    return hourly_price * 24 * 30
-        
-        return self.fallback_costs['RDS'].get(instance_type, 50)
+        return self.fallback_costs.get(service, {}).get(instance_type, 50)
     
     def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
         try:
