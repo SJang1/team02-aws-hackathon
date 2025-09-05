@@ -209,7 +209,7 @@ resource "aws_instance" "web" {
               # Install nginx and openssl
               yum update -y
               amazon-linux-extras install nginx1 -y
-              yum install -y openssl
+              yum install -y openssl nginx
               
               # Create SSL certificate directory
               mkdir -p /etc/nginx/ssl

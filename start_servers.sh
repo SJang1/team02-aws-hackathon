@@ -2,7 +2,10 @@
 
 sudo yum update -y
 sudo yum install -y python3 python3-pip
-pip3 install flask flask-cors requests boto3
+
+# Install compatible versions for older OpenSSL
+pip3 install flask flask-cors
+pip3 install "urllib3<2.0" "requests<2.29.0" "boto3"
 
 # 백엔드 서버 (imsi_new.py) 실행
 echo "Starting backend server (imsi_new.py) on port 5000..."
