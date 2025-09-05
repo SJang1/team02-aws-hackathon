@@ -117,36 +117,36 @@ class AWSOptimizer:
             print(f"Failed to get AWS services: {e}")
             return []
     
-    def step1_get_required_services(self, service_type, users, performance, additional_info, region='us-east-1'):
-        """1단계: AI를 통해 필요한 서비스 목록 추출"""
+    def step1_disaster_ready_services(self, service_type, users, performance, additional_info, region='us-east-1'):
+        """1단계: 재해상황 대비 필수 AWS 서비스 목록 추출"""
         try:
-            # AWS 모든 서비스 목록 가져오기
-            aws_services = self.get_all_aws_services()
-            services_list = "\n".join([f"- {s['ServiceCode']}: {s['ServiceName']}" for s in aws_services])  # 처음 50개만
-
-            print(services_list)
-            
             bedrock_prompt = f"""
-            AWS 서비스 추천 요청:
+            재해상황 대비 AWS 아키텍처 설계 요청:
             - 서비스 유형: {service_type}
             - 예상 사용자 수: {users}
             - 성능 요구사항: {performance}
-            - 추가 요구사항: {additional_info}
+            - 추가 정보: {additional_info}
             - 리전: {region}
             
-            사용 가능한 AWS 서비스 목록:
-            {services_list}
+            갑작스러운 트래픽 급증(10-100배), DDoS 공격, 서버 장애 등 재해상황에 대비한 AWS 서비스 조합을 추천해주세요.
+            다음 서비스들을 우선적으로 고려하되, 한정하지 말고, 사용자가 필요한 서비스를 추가하세요:
+            - AmazonCloudFront (CDN, DDoS 보호)
+            - AWSWAF (웹 방화벽)
+            - ElasticLoadBalancingV2 (로드밸런싱)
+            - AmazonEC2 (Auto Scaling 지원)
+            - AmazonRDS (Multi-AZ 배포)
+            - ElastiCache (캐싱)
+            - AmazonS3 (정적 콘텐츠)
+            - AmazonRoute53 (DNS 장애조치)
+            - AmazonCloudWatch (모니터링)
             
-            위 서비스 목록에서 요구사항에 맞는 서비스들을 선택해주세요.
-            예산은 고려하지 말고, 이상적인 아키텍처를 위해 필요한 AWS 서비스들을 나열해주세요.
-            인스턴스 타입은 지정하지 말고 서비스 코드만 나열해주세요.
-            
-            예시 응답:
+            응답 형식:
             {{
-                "services": [
-                    {{"name": "AmazonEC2", "reason": "웹서버 호스팅"}},
-                    {{"name": "AmazonRDS", "reason": "데이터베이스 저장"}},
-                    {{"name": "ElasticLoadBalancing", "reason": "로드 밸런싱"}}
+                "disaster_ready_services": [
+                    {{"name": "AmazonCloudFront", "reason": "CDN으로 트래픽 분산 및 DDoS 보호"}},
+                    {{"name": "AWSWAF", "reason": "웹 애플리케이션 방화벽으로 악성 트래픽 차단"}},
+                    {{"name": "ElasticLoadBalancingV2", "reason": "다중 인스턴스 간 로드밸런싱"}},
+                    {{"name": "AmazonEC2", "reason": "Auto Scaling으로 트래픽 급증 대응"}}
                 ]
             }}
             """
@@ -158,7 +158,7 @@ class AWSOptimizer:
                 }],
                 "inferenceConfig": {
                     "max_new_tokens": 32768,
-                    "temperature": 0.3
+                    "temperature": 0.12
                 }
             })
             
@@ -181,12 +181,19 @@ class AWSOptimizer:
                 end = content.rfind('}') + 1
                 json_str = content[start:end]
             
-            analysis = json.loads(json_str)
-            return analysis['services']
+            services_data = json.loads(json_str)
+            services = services_data['disaster_ready_services']
+            
+            print(f"\n=== Step 1 Complete: {len(services)} disaster-ready services identified ===")
+            for service in services:
+                print(f"  - {service['name']}: {service['reason']}")
+            print()
+            
+            return services
         except Exception as e:
-            print(f"Step 1 Bedrock failed: {e}")
+            print(f"Step 1 disaster-ready analysis failed: {e}")
         
-        return self._fallback_services(service_type)
+        return self._fallback_disaster_services(service_type)
     
     def get_service_options(self, service_code, region='us-east-1'):
         """특정 서비스의 모든 옵션을 가져오기"""
@@ -275,8 +282,8 @@ class AWSOptimizer:
         print(f"\n=== Step 2 Complete: {len(priced_services)} services priced ===\n")
         return priced_services
     
-    def step3_optimize_for_budget(self, priced_services, budget):
-        """3단계: AI를 통한 예산 최적화"""
+    def step3_budget_disaster_optimization(self, priced_services, budget, service_type='', users='', performance='', additional_info='', region='us-east-1'):
+        """3단계: 예산 내 재해대비 최적 서비스 조합 추천"""
         try:
             # 서비스 옵션 정보를 AI에게 전달
             services_info = []
@@ -292,21 +299,43 @@ class AWSOptimizer:
                 })
             
             bedrock_prompt = f"""
-            AWS 예산 최적화 요청:
+            재해상황 대비 AWS 예산 최적화 요청:
             - 예산: ${budget}/월
-            - 사용 가능한 서비스와 가격:
+            - 재해대비 서비스와 가격 옵션:
             {json.dumps(services_info, ensure_ascii=False, indent=2)}
             
-            예산 내에서 최대 성능을 낼 수 있는 서비스 조합을 선택해주세요.
-            각 서비스마다 가장 적절한 인스턴스 타입을 선택하고, 예산을 초과하지 마세요.
+            예산 내에서 다음 재해상황에 최적으로 대응할 수 있는 서비스 조합을 추천해주세요:
+            1. 갑작스러운 트래픽 급증 (10-100배)
+            2. DDoS 공격
+            3. 서버/데이터베이스 장애
+            4. 네트워크 장애
+
+            다만 재해상황보다 사용자가 원하는 서비스 운영이 우선임을 감안하세요. 재해상황에 대한 플랜 설정이 불가능한 경우 재해복구 등은 제외하여도 괜찮습니다.
+            
+            우선순위:
+            1. 가용성 > 성능 > 비용
+            2. Auto Scaling 가능한 서비스 우선
+            3. Multi-AZ 배포 고려
+            4. CDN 및 캐싱 활용
+            5. 모니터링 및 알림 포함
+
+            사용자가 원한 서비스 프롬포트:
+            재해상황 대비 AWS 아키텍처 설계 요청:
+            - 서비스 유형: {service_type}
+            - 예상 사용자 수: {users}
+            - 성능 요구사항: {performance}
+            - 추가 정보: {additional_info}
+            - 리전: {region}
             
             응답 형식:
             {{
-                "optimized_services": [
-                    {{"name": "EC2", "type": "t3.medium", "monthly_cost": 38, "reason": "웹서버 (성능 최적화)", "quantity": 1}}
+                "disaster_ready_services": [
+                    {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": 50, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1, "disaster_benefit": "트래픽 급증 시 오리진 서버 부하 감소"}},
+                    {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": 38, "reason": "Auto Scaling 웹서버", "quantity": 2, "disaster_benefit": "자동 확장으로 트래픽 급증 대응"}}
                 ],
                 "total_cost": 150,
-                "explanation": "예산 내에서 최대 성능을 위해 선택한 이유"
+                "disaster_readiness_score": 85,
+                "explanation": "재해상황 대비를 위해 선택한 이유와 예상 효과"
             }}
             """
             
@@ -317,7 +346,7 @@ class AWSOptimizer:
                 }],
                 "inferenceConfig": {
                     "max_new_tokens": 32768,
-                    "temperature": 0.3
+                    "temperature": 0.12
                 }
             })
             
@@ -341,21 +370,46 @@ class AWSOptimizer:
                 json_str = content[start:end]
             
             optimization = json.loads(json_str)
-            return optimization['optimized_services'], optimization['total_cost']
+            return optimization['disaster_ready_services'], optimization['total_cost']
                 
         except Exception as e:
-            print(f"Step 3 AI optimization failed: {e}")
+            print(f"Step 3 disaster-ready optimization failed: {e}")
         
-        # AI 실패 시 기본 최적화
-        return self._fallback_optimization(priced_services, budget)
+        # AI 실패 시 기본 재해대비 최적화
+        return self._fallback_disaster_optimization(priced_services, budget)
     
-    def _fallback_optimization(self, priced_services, budget):
-        """기본 최적화 로직"""
+    def _fallback_disaster_optimization(self, priced_services, budget):
+        """기본 재해대비 최적화 로직"""
         optimized = []
         total_cost = 0
         
+        # 재해대비 우선순위: CDN > 로드밸런서 > Auto Scaling > 모니터링
+        priority_services = ['AmazonCloudFront', 'ElasticLoadBalancingV2', 'AmazonEC2', 'AmazonCloudWatch']
+        
+        # 우선순위 서비스부터 처리
+        for priority_service in priority_services:
+            for service in priced_services:
+                if service['name'] == priority_service and service['options']:
+                    # 중간 성능 옵션 선택 (재해대비를 위해)
+                    mid_option = service['options'][len(service['options'])//2] if len(service['options']) > 1 else service['options'][0]
+                    if total_cost + mid_option['monthly_cost'] <= budget:
+                        quantity = 2 if priority_service == 'AmazonEC2' else 1  # EC2는 이중화
+                        cost = mid_option['monthly_cost'] * quantity
+                        if total_cost + cost <= budget:
+                            optimized.append({
+                                'name': service['name'],
+                                'type': mid_option['type'],
+                                'monthly_cost': cost,
+                                'reason': f"{mid_option['reason']} (재해대비)",
+                                'quantity': quantity,
+                                'disaster_benefit': '재해상황 대응 강화'
+                            })
+                            total_cost += cost
+                    break
+        
+        # 나머지 서비스 처리
         for service in priced_services:
-            if service['options']:
+            if service['name'] not in priority_services and service['options']:
                 cheapest = service['options'][0]
                 if total_cost + cheapest['monthly_cost'] <= budget:
                     optimized.append({
@@ -363,41 +417,57 @@ class AWSOptimizer:
                         'type': cheapest['type'],
                         'monthly_cost': cheapest['monthly_cost'],
                         'reason': cheapest['reason'],
-                        'quantity': 1
+                        'quantity': 1,
+                        'disaster_benefit': '기본 서비스 지원'
                     })
                     total_cost += cheapest['monthly_cost']
         
         return optimized, total_cost
     
     def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
-        """3단계 최적화 프로세스 실행"""
-        # 1단계: 필요 서비스 목록 추출
-        required_services = self.step1_get_required_services(service_type, users, performance, additional_info, region)
+        """3단계 재해대비 최적화 프로세스 실행"""
+        # 1단계: 재해상황 대비 필수 서비스 목록 추출
+        required_services = self.step1_disaster_ready_services(service_type, users, performance, additional_info, region)
         
         # 2단계: 서비스별 가격 조회
         priced_services = self.step2_get_service_prices(required_services, region)
         
-        # 3단계: 예산에 맞는 최적화
-        optimized_services, total_cost = self.step3_optimize_for_budget(priced_services, budget)
+        # 3단계: 예산 내 재해대비 최적 조합 추천
+        optimized_services, total_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region)
         
         return optimized_services, total_cost
     
-    def _fallback_services(self, service_type):
-        """AI 실패 시 기본 서비스 목록"""
-        if service_type in ['웹사이트', 'API'] or 'web' in service_type.lower():
-            return [
-                {'name': 'AmazonEC2', 'reason': '웹서버'},
-                {'name': 'AmazonRDS', 'reason': '데이터베이스'}
+    def _fallback_disaster_services(self, service_type):
+        """AI 실패 시 기본 재해대비 서비스 목록"""
+        base_disaster_services = [
+            {'name': 'AmazonCloudFront', 'reason': 'CDN으로 트래픽 분산 및 DDoS 보호'},
+            {'name': 'ElasticLoadBalancingV2', 'reason': '로드밸런서로 트래픽 분산'},
+            {'name': 'AmazonCloudWatch', 'reason': '실시간 모니터링 및 알림'}
+        ]
+        
+        if service_type in ['웹사이트', 'API', '게임'] or 'web' in service_type.lower():
+            return base_disaster_services + [
+                {'name': 'AWSWAF', 'reason': '웹 애플리케이션 방화벽'},
+                {'name': 'AmazonEC2', 'reason': 'Auto Scaling 웹서버'},
+                {'name': 'AmazonRDS', 'reason': 'Multi-AZ 데이터베이스'},
+                {'name': 'ElastiCache', 'reason': '캐싱으로 성능 향상'},
+                {'name': 'AmazonS3', 'reason': '정적 콘텐츠 저장'}
             ]
         elif service_type == '데이터베이스':
-            return [{'name': 'AmazonRDS', 'reason': '데이터베이스'}]
+            return base_disaster_services + [
+                {'name': 'AmazonRDS', 'reason': 'Multi-AZ 고가용성 데이터베이스'},
+                {'name': 'AmazonS3', 'reason': '백업 저장소'}
+            ]
         elif service_type == '머신러닝':
-            return [
-                {'name': 'AmazonEC2', 'reason': 'ML 워크로드'},
-                {'name': 'AmazonS3', 'reason': '데이터 저장소'}
+            return base_disaster_services + [
+                {'name': 'AmazonEC2', 'reason': 'Auto Scaling ML 워크로드'},
+                {'name': 'AmazonS3', 'reason': '데이터 저장소 및 백업'}
             ]
         else:
-            return [{'name': 'AmazonEC2', 'reason': '기본 서버'}]
+            return base_disaster_services + [
+                {'name': 'AmazonEC2', 'reason': 'Auto Scaling 서버'},
+                {'name': 'AmazonS3', 'reason': '백업 및 저장소'}
+            ]
 
 optimizer = AWSOptimizer()
 
