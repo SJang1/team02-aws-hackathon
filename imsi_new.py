@@ -126,7 +126,7 @@ class AWSOptimizer:
                     "content": [{"text": bedrock_prompt}]
                 }],
                 "inferenceConfig": {
-                    "max_new_tokens": 500000,
+                    "max_new_tokens": 32768,
                     "temperature": 0.3
                 }
             })
@@ -264,7 +264,7 @@ class AWSOptimizer:
                     "content": [{"text": bedrock_prompt}]
                 }],
                 "inferenceConfig": {
-                    "max_new_tokens": 500000,
+                    "max_new_tokens": 32768,
                     "temperature": 0.3
                 }
             })
