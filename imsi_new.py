@@ -484,8 +484,8 @@ class AWSOptimizer:
             응답 형식:
             {{
                 "disaster_ready_services": [
-                    {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": 50, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1, "disaster_benefit": "트래픽 급증 시 오리진 서버 부하 감소"}},
-                    {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": 38, "reason": "Auto Scaling 웹서버", "quantity": 2, "disaster_benefit": "자동 확장으로 트래픽 급증 대응"}}
+                    {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": number, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1, "disaster_benefit": "트래픽 급증 시 오리진 서버 부하 감소"}},
+                    {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": number, "reason": "Auto Scaling 웹서버", "quantity": 2, "disaster_benefit": "자동 확장으로 트래픽 급증 대응"}}
                 ],
                 "total_cost": 150,
                 "disaster_readiness_score": 85,
