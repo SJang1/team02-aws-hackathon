@@ -403,6 +403,7 @@ NGINX_EOF
               echo "Repository clone failed, creating placeholder files"
               
               # Set RDS password as environment variable for the application
+              echo "export RDS_USERNAME=${aws_db_instance.main.username}" >> /home/ec2-user/.bashrc
               echo "export RDS_PASSWORD='${random_password.db_password.result}'" >> /home/ec2-user/.bashrc
               export RDS_PASSWORD='${random_password.db_password.result}'
               
@@ -416,7 +417,7 @@ NGINX_EOF
                 chmod +x test_rds_connection.py 2>/dev/null || true
                 
                 # Start servers with RDS password
-                RDS_PASSWORD='${random_password.db_password.result}' nohup ./start_servers.sh > /home/ec2-user/server.log 2>&1 &
+                RDS_PASSWORD='${random_password.db_password.result}' bash ./start_servers.sh &
               else
                 # Fallback: create simple test server
                 pip3 install flask pymysql cryptography boto3
