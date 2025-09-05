@@ -37,7 +37,14 @@
         .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.3s, box-shadow 0.3s; }
         .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
         
-        #result { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; color: white; display: none; }
+        .loading { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; color: white; display: none; text-align: center; }
+        .result { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; color: white; display: none; }
+        .result.success { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
+        .result.error { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
+        .service-item { background: rgba(255,255,255,0.1); margin: 0.5rem 0; padding: 1rem; border-radius: 8px; }
+        .cost-summary { background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem; }
+        .spinner { border: 3px solid rgba(255,255,255,0.3); border-top: 3px solid white; border-radius: 50%; width: 40px; height: 40px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
+        @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
         .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin: 4rem 2rem; padding: 0 2rem; }
         .feature { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; color: white; }
@@ -163,9 +170,14 @@
         </div>
     </form>
     
-        <div id="result">
-            <h3><i class="fas fa-cog fa-spin"></i> AI가 분석 중입니다...</h3>
-            <p id="status">최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <h3><i class="fas fa-robot"></i> AI가 분석 중입니다...</h3>
+            <p>최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
+        </div>
+        
+        <div id="result" class="result">
+            <div id="result-content"></div>
         </div>
         </div>
     </div>
@@ -209,7 +221,7 @@
             const additionalInfo = document.getElementById('additionalInfo').value;
             const budget = document.getElementById('budget').value;
             
-            document.getElementById('result').style.display = 'block';
+            showLoading();
             
             try {
                 const response = await fetch('/optimize', {
@@ -226,39 +238,78 @@
                 });
                 
                 const data = await response.json();
-                const uuid = data.uuid;
                 
-                // 폴링 시작
+                if (data.error) {
+                    showError(`오류: ${data.error}`);
+                    return;
+                }
+                
+                const uuid = data.uuid;
+                if (!uuid) {
+                    showError('UUID를 받지 못했습니다.');
+                    return;
+                }
+                
                 pollResult(uuid);
             } catch (error) {
-                document.getElementById('status').textContent = '오류가 발생했습니다.';
+                showError('오류가 발생했습니다.');
             }
         });
         
+        function showLoading() {
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('result').style.display = 'none';
+        }
+        
+        function showResult(content, isSuccess = true) {
+            document.getElementById('loading').style.display = 'none';
+            const resultDiv = document.getElementById('result');
+            resultDiv.className = isSuccess ? 'result success' : 'result error';
+            resultDiv.style.display = 'block';
+            document.getElementById('result-content').innerHTML = content;
+        }
+        
+        function showError(message) {
+            showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 오류</h3><p>${message}</p>`, false);
+        }
+        
         async function pollResult(uuid) {
+            if (!uuid || uuid === 'undefined') {
+                showError('잘못된 UUID입니다.');
+                return;
+            }
+            
             try {
                 const response = await fetch(`/status/${uuid}`);
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
                     if (data.feasible) {
-                        let servicesHtml = '<h4>추천 서비스:</h4><ul>';
+                        let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                        content += '<div class="services-list">';
                         data.services.forEach(service => {
-                            servicesHtml += `<li>${service.name} (${service.type}): $${service.monthly_cost}/월 - ${service.reason}</li>`;
+                            content += `<div class="service-item">`;
+                            content += `<strong>${service.name}</strong> (${service.type})`;
+                            content += `<br><span>$${service.monthly_cost}/월 - ${service.reason}</span>`;
+                            content += `</div>`;
                         });
-                        servicesHtml += `</ul><p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
-                        servicesHtml += `<p>예산 내 절약: $${data.savings}</p>`;
-                        document.getElementById('status').innerHTML = `<strong><i class="fas fa-check-circle"></i> 분석 완료!</strong><br>${servicesHtml}`;
+                        content += '</div>';
+                        content += `<div class="cost-summary">`;
+                        content += `<h4>비용 요약</h4>`;
+                        content += `<p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
+                        content += `<p>예산 내 절약: $${data.savings}</p>`;
+                        content += `</div>`;
+                        showResult(content, true);
                     } else {
-                        document.getElementById('status').innerHTML = `<strong><i class="fas fa-exclamation-triangle"></i> 예산 부족</strong><br><p>${data.message}</p>`;
+                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>${data.message}</p>`, false);
                     }
                 } else if (data.status === 'failed') {
-                    document.getElementById('status').innerHTML = '<i class="fas fa-exclamation-triangle"></i> 처리 실패';
+                    showError('처리 실패');
                 } else {
                     setTimeout(() => pollResult(uuid), 2000);
                 }
             } catch (error) {
-                document.getElementById('status').textContent = '폴링 오류';
+                showError('폴링 오류');
             }
         }
     </script>
