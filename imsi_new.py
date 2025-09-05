@@ -34,12 +34,11 @@ class AWSOptimizer:
         try:
             price = self._get_aws_service_price(service, instance_type, region)
             self.pricing_cache[cache_key] = price
+            print(f"Price fetched: {service} {instance_type} = ${price}/month")
             return price
         except Exception as e:
             print(f"Pricing API failed for {service} {instance_type}: {e}")
-            fallback = self.fallback_costs.get(service, {}).get(instance_type, 50)
-            self.pricing_cache[cache_key] = fallback
-            return fallback
+            return None
     
     def _get_aws_service_price(self, service, instance_type, region):
         location_map = {
@@ -94,7 +93,7 @@ class AWSOptimizer:
                             hourly_price = float(price_per_unit)
                             return hourly_price * 24 * 30
         
-        return self.fallback_costs.get(service, {}).get(instance_type, 50)
+        return None
     
     def step1_get_required_services(self, service_type, users, performance, additional_info, region='us-east-1'):
         """1단계: AI를 통해 필요한 서비스 목록 추출"""
@@ -192,22 +191,33 @@ class AWSOptimizer:
         priced_services = []
         for service in services:
             service_name = service['name']
+            print(f"\n=== Processing {service_name} ===\n")
+            
             if service_name in service_options:
                 options = []
                 for option in service_options[service_name]:
                     price = self.get_pricing(service_name, option, region)
-                    options.append({
-                        'type': option,
-                        'monthly_cost': price,
-                        'reason': service['reason']
-                    })
+                    if price is not None:
+                        options.append({
+                            'type': option,
+                            'monthly_cost': price,
+                            'reason': service['reason']
+                        })
                 
-                priced_services.append({
-                    'name': service_name,
-                    'reason': service['reason'],
-                    'options': sorted(options, key=lambda x: x['monthly_cost'])
-                })
+                if options:
+                    sorted_options = sorted(options, key=lambda x: x['monthly_cost'])
+                    priced_services.append({
+                        'name': service_name,
+                        'reason': service['reason'],
+                        'options': sorted_options
+                    })
+                    
+                    print(f"\n{service_name} pricing completed:")
+                    for i, opt in enumerate(sorted_options[:5]):
+                        print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']}/month")
+                    print(f"  Total {len(sorted_options)} options available\n")
         
+        print(f"\n=== Step 2 Complete: {len(priced_services)} services priced ===\n")
         return priced_services
     
     def step3_optimize_for_budget(self, priced_services, budget):
