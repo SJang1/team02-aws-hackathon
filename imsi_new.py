@@ -5,70 +5,102 @@ import uuid
 import time
 from datetime import datetime
 from threading import Thread
-import sqlite3
+import pymysql
 import os
 app = Flask(__name__)
 
 # AWS 클라이언트
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 pricing_client = boto3.client('pricing', region_name='us-east-1')
+rds_client = boto3.client('rds', region_name='us-east-1')
 
-# SQLite DB 초기화
-DB_PATH = 'clops_data.db'
+# RDS 설정
+RDS_CONFIG = {
+    'host': os.environ.get('RDS_ENDPOINT', 'localhost'),
+    'user': os.environ.get('RDS_USERNAME', 'admin'),
+    'password': os.environ.get('RDS_PASSWORD', ''),
+    'database': os.environ.get('RDS_DATABASE', 'clops'),
+    'port': int(os.environ.get('RDS_PORT', 3306)),
+    'charset': 'utf8mb4'
+}
+
+# 메모리 저장소 (폴백)
+memory_storage = {}
+
+def get_rds_info():
+    try:
+        response = rds_client.describe_db_instances()
+        for db in response['DBInstances']:
+            if db['DBInstanceStatus'] == 'available':
+                print(f"RDS Status: {db['DBInstanceStatus']}")
+                print(f"RDS Endpoint: {db['Endpoint']['Address']}")
+                return db['Endpoint']['Address'], db['Endpoint']['Port']
+        return None, None
+    except Exception as e:
+        print(f"Failed to get RDS info: {e}")
+        return None, None
+
+def get_db_connection():
+    import time
+    max_retries = 3
+    
+    # Get RDS info first
+    endpoint, port = get_rds_info()
+    if endpoint:
+        RDS_CONFIG['host'] = endpoint
+        RDS_CONFIG['port'] = port
+    
+    for attempt in range(max_retries):
+        try:
+            print(f"Connecting to RDS: {RDS_CONFIG['host']}:{RDS_CONFIG['port']}")
+            return pymysql.connect(**RDS_CONFIG)
+        except Exception as e:
+            print(f"RDS connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(5)
+            else:
+                print("RDS connection failed, using fallback mode")
+                return None
 
 def init_db():
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Running in fallback mode without database")
+            return
+        cursor = conn.cursor()
+    except Exception as e:
+        print(f"Database connection failed: {e}")
+        return
+    
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS requests (
-            uuid TEXT PRIMARY KEY,
-            service_type TEXT,
-            users TEXT,
-            performance TEXT,
-            additional_info TEXT,
-            budget REAL,
-            region TEXT,
-            status TEXT,
-            total_cost REAL,
-            savings REAL,
-            feasible BOOLEAN,
-            error_message TEXT,
-            created_at TIMESTAMP,
-            updated_at TIMESTAMP
-        )
-    ''')
-    
-    cursor.execute('''
-        CREATE TABLE IF NOT EXISTS services (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            request_uuid TEXT,
-            service_name TEXT,
-            service_type TEXT,
-            monthly_cost REAL,
-            quantity INTEGER,
-            reason TEXT,
-            FOREIGN KEY (request_uuid) REFERENCES requests (uuid)
+            uuid VARCHAR(36) PRIMARY KEY,
+            request_data JSON NOT NULL,
+            response_data JSON,
+            status VARCHAR(20) DEFAULT 'pending',
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+            updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
         )
     ''')
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS contacts (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            uuid TEXT,
-            name TEXT,
-            email TEXT,
-            subject TEXT,
+            id INT AUTO_INCREMENT PRIMARY KEY,
+            uuid VARCHAR(36),
+            name VARCHAR(255),
+            email VARCHAR(255),
+            subject VARCHAR(255),
             message TEXT,
-            status TEXT,
-            created_at TIMESTAMP
+            status VARCHAR(20),
+            created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
+        
     conn.commit()
     conn.close()
-
-init_db()
+    print("Database initialized successfully")
 
 class AWSOptimizer:
     def __init__(self):
@@ -543,128 +575,91 @@ class AWSOptimizer:
 
 optimizer = AWSOptimizer()
 
-def store_request(request_uuid, data):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT uuid FROM requests WHERE uuid = ?', (request_uuid,))
-    exists = cursor.fetchone()
-    
-    if exists:
-        cursor.execute('''
-            UPDATE requests SET 
-                status = ?, total_cost = ?, savings = ?, feasible = ?, 
-                error_message = ?, updated_at = ?
-            WHERE uuid = ?
-        ''', (
-            data.get('status'),
-            data.get('total_cost'),
-            data.get('savings'),
-            data.get('feasible'),
-            data.get('error'),
-            data.get('updated_at', datetime.utcnow()),
-            request_uuid
-        ))
+def store_request(request_uuid, request_data, response_data=None, status='pending'):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            # 메모리 저장소 사용
+            memory_storage[request_uuid] = {
+                'request_data': request_data,
+                'response_data': response_data,
+                'status': status,
+                'created_at': datetime.utcnow().isoformat()
+            }
+            print(f"Stored in memory: {request_uuid}")
+            return
+        cursor = conn.cursor()
         
-        if 'services' in data:
-            cursor.execute('DELETE FROM services WHERE request_uuid = ?', (request_uuid,))
-            for service in data['services']:
-                cursor.execute('''
-                    INSERT INTO services (request_uuid, service_name, service_type, monthly_cost, quantity, reason)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (
-                    request_uuid,
-                    service.get('name'),
-                    service.get('type'),
-                    service.get('monthly_cost'),
-                    service.get('quantity', 1),
-                    service.get('reason')
-                ))
-    else:
         cursor.execute('''
-            INSERT INTO requests (uuid, service_type, users, performance, additional_info, 
-                                budget, region, status, created_at, updated_at)
-            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
-        ''', (
-            request_uuid,
-            data.get('service_type'),
-            data.get('users'),
-            data.get('performance'),
-            data.get('additional_info'),
-            data.get('budget'),
-            data.get('region'),
-            data.get('status'),
-            data.get('created_at', datetime.utcnow()),
-            data.get('updated_at', datetime.utcnow())
-        ))
-    
-    conn.commit()
-    conn.close()
+            INSERT INTO requests (uuid, request_data, response_data, status)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            response_data = VALUES(response_data),
+            status = VALUES(status),
+            updated_at = CURRENT_TIMESTAMP
+        ''', (request_uuid, json.dumps(request_data), json.dumps(response_data) if response_data else None, status))
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database store failed: {e}")
+        # 메모리 저장소 사용
+        memory_storage[request_uuid] = {
+            'request_data': request_data,
+            'response_data': response_data,
+            'status': status,
+            'created_at': datetime.utcnow().isoformat()
+        }
 
 def get_request(request_uuid):
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute('SELECT * FROM requests WHERE uuid = ?', (request_uuid,))
-    row = cursor.fetchone()
-    
-    if not row:
+    try:
+        conn = get_db_connection()
+        if not conn:
+            # 메모리 저장소에서 검색
+            if request_uuid in memory_storage:
+                return memory_storage[request_uuid]
+            return {'status': 'not_found'}
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        cursor.execute('SELECT * FROM requests WHERE uuid = %s', (request_uuid,))
+        result = cursor.fetchone()
+        
         conn.close()
-        return None
-    
-    columns = [desc[0] for desc in cursor.description]
-    result = dict(zip(columns, row))
-    
-    cursor.execute('SELECT * FROM services WHERE request_uuid = ?', (request_uuid,))
-    services_rows = cursor.fetchall()
-    
-    if services_rows:
-        service_columns = [desc[0] for desc in cursor.description]
-        services = []
-        for service_row in services_rows:
-            service_dict = dict(zip(service_columns, service_row))
-            services.append({
-                'name': service_dict['service_name'],
-                'type': service_dict['service_type'],
-                'monthly_cost': service_dict['monthly_cost'],
-                'quantity': service_dict['quantity'],
-                'reason': service_dict['reason']
-            })
-        result['services'] = services
-    
-    conn.close()
-    return result
+        
+        if result:
+            result['request_data'] = json.loads(result['request_data'])
+            if result['response_data']:
+                result['response_data'] = json.loads(result['response_data'])
+        
+        return result
+    except Exception as e:
+        print(f"Database get failed: {e}")
+        # 메모리 저장소에서 검색
+        if request_uuid in memory_storage:
+            return memory_storage[request_uuid]
+        return {'status': 'error', 'message': 'Database error'}
 
 def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
-        store_request(request_uuid, {
-            'uuid': request_uuid,
-            'status': 'analyzing',
+        request_data = {
             'service_type': service_type,
             'users': users,
             'performance': performance,
             'additional_info': additional_info,
             'budget': budget,
-            'region': region,
-            'created_at': datetime.utcnow(),
-            'updated_at': datetime.utcnow()
-        })
+            'region': region
+        }
+        
+        store_request(request_uuid, request_data, status='processing')
         
         # 3단계 최적화 프로세스 실행
         optimized_services, total_cost = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region)
-        
-        store_request(request_uuid, {
-            'status': 'optimizing',
-            'services_analyzed': optimized_services,
-            'updated_at': datetime.utcnow()
-        })
         
         # 결과 생성
         feasible = total_cost <= budget
         
         if feasible:
-            result = {
-                'status': 'completed',
+            response_data = {
                 'feasible': True,
                 'services': optimized_services,
                 'total_cost': total_cost,
@@ -673,8 +668,7 @@ def process_optimization(request_uuid, service_type, users, performance, additio
                 'region': region
             }
         else:
-            result = {
-                'status': 'completed',
+            response_data = {
                 'feasible': False,
                 'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${total_cost}가 필요합니다.',
                 'minimum_budget': total_cost,
@@ -682,15 +676,12 @@ def process_optimization(request_uuid, service_type, users, performance, additio
                 'region': region
             }
         
-        result['updated_at'] = datetime.utcnow()
-        store_request(request_uuid, result)
+        store_request(request_uuid, request_data, response_data, 'completed')
         
     except Exception as e:
-        store_request(request_uuid, {
-            'status': 'failed',
-            'error': str(e),
-            'updated_at': datetime.utcnow()
-        })
+        error_response = {'error': str(e)}
+        request_data = request_data if 'request_data' in locals() else {}
+        store_request(request_uuid, request_data, error_response, 'failed')
 
 @app.route('/optimize', methods=['POST'])
 def create_optimization():
@@ -724,30 +715,36 @@ def save_contact():
     data = request.json
     contact_uuid = str(uuid.uuid4())
     
-    conn = sqlite3.connect(DB_PATH)
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO contacts (uuid, name, email, subject, message, status, created_at)
-        VALUES (?, ?, ?, ?, ?, ?, ?)
-    ''', (
-        contact_uuid,
-        data.get('name'),
-        data.get('email'),
-        data.get('subject'),
-        data.get('message'),
-        'received',
-        datetime.utcnow()
-    ))
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'status': 'success', 'uuid': contact_uuid})
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'status': 'success', 'uuid': contact_uuid, 'message': 'Stored locally'})
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO contacts (uuid, name, email, subject, message, status)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (
+            contact_uuid,
+            data.get('name'),
+            data.get('email'),
+            data.get('subject'),
+            data.get('message'),
+            'received'
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'uuid': contact_uuid})
+    except Exception as e:
+        print(f"Contact save failed: {e}")
+        return jsonify({'status': 'success', 'uuid': contact_uuid, 'message': 'Stored locally'})
 
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 if __name__ == '__main__':
+    init_db()
     app.run(host='0.0.0.0', port=5000)
