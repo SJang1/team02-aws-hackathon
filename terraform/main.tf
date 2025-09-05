@@ -176,10 +176,10 @@ resource "aws_iam_role" "ec2_role" {
   }
 }
 
-# IAM Policy for Bedrock and Pricing
-resource "aws_iam_policy" "bedrock_pricing_policy" {
-  name        = "${var.project_name}-bedrock-pricing-policy"
-  description = "Policy for Bedrock and Pricing API access"
+# IAM Policy for Bedrock, Pricing and RDS
+resource "aws_iam_policy" "bedrock_pricing_rds_policy" {
+  name        = "${var.project_name}-bedrock-pricing-rds-policy"
+  description = "Policy for Bedrock, Pricing API and RDS access"
 
   policy = jsonencode({
     Version = "2012-10-17"
@@ -197,19 +197,27 @@ resource "aws_iam_policy" "bedrock_pricing_policy" {
           "pricing:*"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBInstances",
+          "rds:DescribeDBClusters"
+        ]
+        Resource = "*"
       }
     ]
   })
 
   tags = {
-    Name = "${var.project_name}-bedrock-pricing-policy"
+    Name = "${var.project_name}-bedrock-pricing-rds-policy"
   }
 }
 
 # Attach policy to role
-resource "aws_iam_role_policy_attachment" "bedrock_pricing_attach" {
+resource "aws_iam_role_policy_attachment" "bedrock_pricing_rds_attach" {
   role       = aws_iam_role.ec2_role.name
-  policy_arn = aws_iam_policy.bedrock_pricing_policy.arn
+  policy_arn = aws_iam_policy.bedrock_pricing_rds_policy.arn
 }
 
 # RDS Subnet Group
