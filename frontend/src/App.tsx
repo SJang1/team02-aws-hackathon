@@ -2,10 +2,25 @@ import React, { useState } from 'react';
 import ServiceRequestForm from './components/ServiceRequestForm';
 import RecommendationDisplay from './components/RecommendationDisplay';
 
+interface ServiceDetail {
+  service_name: string;
+  instance_type: string;
+  monthly_cost: number;
+  description: string;
+  reason?: string;
+  cost_per_hour?: number;
+}
+
 interface Recommendation {
-  services: string[];
+  services: ServiceDetail[];
   architecture: string;
-  estimatedCost: number;
+  total_cost: number;
+  budget_utilization: number;
+  cost_breakdown?: {
+    total_monthly: number;
+    total_yearly: number;
+    by_service: Record<string, any>;
+  };
 }
 
 function App() {
@@ -15,7 +30,8 @@ function App() {
   const handleSubmit = async (description: string, budget: number) => {
     setLoading(true);
     try {
-      const response = await fetch('https://gfctablne7.execute-api.us-east-1.amazonaws.com/dev/recommend', {
+      // EC2 서버 엔드포인트로 변경 (배포 후 실제 IP/도메인으로 수정 필요)
+      const response = await fetch('http://localhost:8000/api/recommend', {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
