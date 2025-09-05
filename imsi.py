@@ -132,7 +132,7 @@ class AWSOptimizer:
                     }
                 ],
                 "inferenceConfig": {
-                    "max_new_tokens": 1000,
+                    "max_new_tokens": 800000,
                     "temperature": 0.3
                 }
             })
