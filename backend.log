@@ -1,0 +1,399 @@
+ * Serving Flask app 'imsi_new'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on all addresses (0.0.0.0)
+ * Running on http://127.0.0.1:5000
+ * Running on http://172.31.23.67:5000
+Press CTRL+C to quit
+127.0.0.1 - - [05/Sep/2025 13:56:49] "POST /optimize HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:56:49] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:56:51] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:56:54] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:56:56] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:56:59] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:01] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:04] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:06] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+Loaded 100 AWS services
+- A4B: A4B
+- ACM: ACM
+- AWSAmplify: AWSAmplify
+- AWSAppFabric: AWSAppFabric
+- AWSAppRunner: AWSAppRunner
+- AWSAppStudio: AWSAppStudio
+- AWSAppSync: AWSAppSync
+- AWSApplicationMigrationSvc: AWSApplicationMigrationSvc
+- AWSB2Bi: AWSB2Bi
+- AWSBCMPricingCalculator: AWSBCMPricingCalculator
+- AWSBackup: AWSBackup
+- AWSBillingConductor: AWSBillingConductor
+- AWSBudgets: AWSBudgets
+- AWSCertificateManager: AWSCertificateManager
+- AWSCleanRooms: AWSCleanRooms
+- AWSCloudFormation: AWSCloudFormation
+- AWSCloudMap: AWSCloudMap
+- AWSCloudTrail: AWSCloudTrail
+- AWSCloudWAN: AWSCloudWAN
+- AWSCodeArtifact: AWSCodeArtifact
+- AWSCodeCommit: AWSCodeCommit
+- AWSCodeDeploy: AWSCodeDeploy
+- AWSCodePipeline: AWSCodePipeline
+- AWSComputeOptimizer: AWSComputeOptimizer
+- AWSConfig: AWSConfig
+- AWSCostExplorer: AWSCostExplorer
+- AWSDataExchange: AWSDataExchange
+- AWSDataSync: AWSDataSync
+- AWSDataTransfer: AWSDataTransfer
+- AWSDatabaseMigrationSvc: AWSDatabaseMigrationSvc
+- AWSDeepRacer: AWSDeepRacer
+- AWSDeveloperSupport: AWSDeveloperSupport
+- AWSDeviceFarm: AWSDeviceFarm
+- AWSDirectConnect: AWSDirectConnect
+- AWSDirectoryService: AWSDirectoryService
+- AWSELB: AWSELB
+- AWSElasticDisasterRecovery: AWSElasticDisasterRecovery
+- AWSElementalMediaConvert: AWSElementalMediaConvert
+- AWSElementalMediaLive: AWSElementalMediaLive
+- AWSElementalMediaPackage: AWSElementalMediaPackage
+- AWSElementalMediaStore: AWSElementalMediaStore
+- AWSElementalMediaTailor: AWSElementalMediaTailor
+- AWSEndUserMessaging3pFees: AWSEndUserMessaging3pFees
+- AWSEnterpriseOnRamp: AWSEnterpriseOnRamp
+- AWSEntityResolution: AWSEntityResolution
+- AWSEvents: AWSEvents
+- AWSFIS: AWSFIS
+- AWSFMS: AWSFMS
+- AWSGlobalAccelerator: AWSGlobalAccelerator
+- AWSGlueElasticViews: AWSGlueElasticViews
+- AWSGlue: AWSGlue
+- AWSGreengrass: AWSGreengrass
+- AWSGroundStation: AWSGroundStation
+- AWSIAMAccessAnalyzer: AWSIAMAccessAnalyzer
+- AWSIoT1Click: AWSIoT1Click
+- AWSIoTAnalytics: AWSIoTAnalytics
+- AWSIoTEvents: AWSIoTEvents
+- AWSIoTFleetWise: AWSIoTFleetWise
+- AWSIoTSiteWise: AWSIoTSiteWise
+- AWSIoTThingsGraph: AWSIoTThingsGraph
+- AWSIoT: AWSIoT
+- AWSLakeFormation: AWSLakeFormation
+- AWSLambda: AWSLambda
+- AWSM2: AWSM2
+- AWSMDC: AWSMDC
+- AWSMediaConnect: AWSMediaConnect
+- AWSMigrationHubRefactorSpaces: AWSMigrationHubRefactorSpaces
+- AWSNetworkFirewall: AWSNetworkFirewall
+- AWSOutposts: AWSOutposts
+- AWSPCS: AWSPCS
+- AWSPrivate5G: AWSPrivate5G
+- AWSQueueService: AWSQueueService
+- AWSR53AppRecoveryController: AWSR53AppRecoveryController
+- AWSResilienceHub: AWSResilienceHub
+- AWSRoboMaker: AWSRoboMaker
+- AWSSecretsManager: AWSSecretsManager
+- AWSSecurityHub: AWSSecurityHub
+- AWSServiceCatalog: AWSServiceCatalog
+- AWSShield: AWSShield
+- AWSStorageGatewayDeepArchive: AWSStorageGatewayDeepArchive
+- AWSStorageGateway: AWSStorageGateway
+- AWSSupplyChain: AWSSupplyChain
+- AWSSupportBusiness: AWSSupportBusiness
+- AWSSupportEnterprise: AWSSupportEnterprise
+- AWSSystemsManager: AWSSystemsManager
+- AWSTelcoNetworkBuilder: AWSTelcoNetworkBuilder
+- AWSTransfer: AWSTransfer
+- AWSWickr: AWSWickr
+- AWSWisdom: AWSWisdom
+- AWSXRay: AWSXRay
+- AlexaTopSites: AlexaTopSites
+- AlexaWebInfoService: AlexaWebInfoService
+- AmazonA2I: AmazonA2I
+- AmazonApiGateway: AmazonApiGateway
+- AmazonAppStream: AmazonAppStream
+- AmazonAthena: AmazonAthena
+- AmazonBedrockService: AmazonBedrockService
+- AmazonBedrock: AmazonBedrock
+- AmazonBraket: AmazonBraket
+- AmazonChimeBusinessCalling: AmazonChimeBusinessCalling
+
+=== Processing AmazonEC2 ===
+
+Found 85 options for AmazonEC2
+Price fetched: AmazonEC2 x2iedn.metal = $29408.543999999998/month
+Price fetched: AmazonEC2 c6gd.4xlarge = $506.88/month
+Price fetched: AmazonEC2 r5ad.2xlarge = $None/month
+  Skipping r5ad.2xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5b.24xlarge = $14446.08/month
+Price fetched: AmazonEC2 c6gd.medium = $None/month
+  Skipping c6gd.medium: No valid pricing data
+Price fetched: AmazonEC2 m5a.8xlarge = $None/month
+  Skipping m5a.8xlarge: No valid pricing data
+Price fetched: AmazonEC2 g6e.4xlarge = $2659.356/month
+Price fetched: AmazonEC2 r7i.8xlarge = $2227.968/month
+Price fetched: AmazonEC2 m5zn.12xlarge = $4091.9040000000005/month
+Price fetched: AmazonEC2 x2idn.32xlarge = $None/month
+  Skipping x2idn.32xlarge: No valid pricing data
+Price fetched: AmazonEC2 x2iedn.xlarge = $919.0151999999999/month
+Price fetched: AmazonEC2 r5b.large = $128.16/month
+Price fetched: AmazonEC2 x2iedn.16xlarge = $14704.271999999999/month
+Price fetched: AmazonEC2 x2iedn.24xlarge = $29182.680000000004/month
+Price fetched: AmazonEC2 r4.xlarge = $None/month
+  Skipping r4.xlarge: No valid pricing data
+Price fetched: AmazonEC2 m7i.8xlarge = $10067.328000000001/month
+Price fetched: AmazonEC2 i3en.24xlarge = $35112.96/month
+Price fetched: AmazonEC2 c7g.12xlarge = $None/month
+  Skipping c7g.12xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5n.16xlarge = $4101.12/month
+Price fetched: AmazonEC2 i3.16xlarge = $9745.92/month
+Price fetched: AmazonEC2 inf1.2xlarge = $2481.1200000000003/month
+Price fetched: AmazonEC2 c4.2xlarge = $425.52/month
+Price fetched: AmazonEC2 r5d.4xlarge = $996.4799999999998/month
+Price fetched: AmazonEC2 m5.8xlarge = $None/month
+  Skipping m5.8xlarge: No valid pricing data
+Price fetched: AmazonEC2 c6in.32xlarge = $None/month
+  Skipping c6in.32xlarge: No valid pricing data
+Price fetched: AmazonEC2 c6id.4xlarge = $2047.68/month
+Price fetched: AmazonEC2 m7i-flex.xlarge = $1249.5024/month
+Price fetched: AmazonEC2 r6id.32xlarge = $9930.24/month
+Price fetched: AmazonEC2 m7i.2xlarge = $356.832/month
+Price fetched: AmazonEC2 m7i.4xlarge = $None/month
+  Skipping m7i.4xlarge: No valid pricing data
+Price fetched: AmazonEC2 m5.4xlarge = $None/month
+  Skipping m5.4xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5n.8xlarge = $2440.08/month
+Price fetched: AmazonEC2 i3en.2xlarge = $None/month
+  Skipping i3en.2xlarge: No valid pricing data
+Price fetched: AmazonEC2 r7gd.metal = $3767.9759999999997/month
+Price fetched: AmazonEC2 u-24tb1.metal = $None/month
+  Skipping u-24tb1.metal: No valid pricing data
+Price fetched: AmazonEC2 c5d.12xlarge = $2484.72/month
+Price fetched: AmazonEC2 m5d.24xlarge = $None/month
+  Skipping m5d.24xlarge: No valid pricing data
+Price fetched: AmazonEC2 c5a.12xlarge = $2070.0/month
+Price fetched: AmazonEC2 x1e.8xlarge = $None/month
+  Skipping x1e.8xlarge: No valid pricing data
+Price fetched: AmazonEC2 m5d.xlarge = $545.76/month
+Price fetched: AmazonEC2 x2idn.16xlarge = $24242.759999999995/month
+Price fetched: AmazonEC2 c6g.xlarge = $None/month
+  Skipping c6g.xlarge: No valid pricing data
+Price fetched: AmazonEC2 r7i.24xlarge = $None/month
+  Skipping r7i.24xlarge: No valid pricing data
+Price fetched: AmazonEC2 c6g.metal = $None/month
+  Skipping c6g.metal: No valid pricing data
+Price fetched: AmazonEC2 c7g.xlarge = $117.504/month
+Price fetched: AmazonEC2 m4.large = $None/month
+  Skipping m4.large: No valid pricing data
+Price fetched: AmazonEC2 c7i.metal-48xl = $23556.095999999998/month
+Price fetched: AmazonEC2 r5b.4xlarge = $2407.68/month
+Price fetched: AmazonEC2 m5zn.3xlarge = $876.96/month
+Price fetched: AmazonEC2 m7gd.4xlarge = $756.6479999999999/month
+Price fetched: AmazonEC2 x1e.16xlarge = $None/month
+  Skipping x1e.16xlarge: No valid pricing data
+Price fetched: AmazonEC2 i4i.xlarge = $None/month
+  Skipping i4i.xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5dn.24xlarge = $6877.44/month
+Price fetched: AmazonEC2 r6id.metal = $8372.736/month
+Price fetched: AmazonEC2 g4dn.4xlarge = $1066.3200000000002/month
+Price fetched: AmazonEC2 c6in.12xlarge = $None/month
+  Skipping c6in.12xlarge: No valid pricing data
+Price fetched: AmazonEC2 m5.2xlarge = $None/month
+  Skipping m5.2xlarge: No valid pricing data
+Price fetched: AmazonEC2 x1e.4xlarge = $4864.32/month
+Price fetched: AmazonEC2 m5zn.metal = $None/month
+  Skipping m5zn.metal: No valid pricing data
+Price fetched: AmazonEC2 c7i.xlarge = $193.82399999999998/month
+Price fetched: AmazonEC2 c7i.16xlarge = $7852.032/month
+Price fetched: AmazonEC2 r5dn.xlarge = $None/month
+  Skipping r5dn.xlarge: No valid pricing data
+Price fetched: AmazonEC2 c7gd.2xlarge = $299.37600000000003/month
+127.0.0.1 - - [05/Sep/2025 13:57:08] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:11] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:13] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:16] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:18] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+Price fetched: AmazonEC2 i4i.4xlarge = $None/month
+  Skipping i4i.4xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5n.xlarge = $None/month
+  Skipping r5n.xlarge: No valid pricing data
+Price fetched: AmazonEC2 r5dn.4xlarge = $1340.928/month
+Price fetched: AmazonEC2 r7g.4xlarge = $None/month
+  Skipping r7g.4xlarge: No valid pricing data
+Price fetched: AmazonEC2 c7i.12xlarge = $2325.888/month
+Price fetched: AmazonEC2 i3.large = $None/month
+  Skipping i3.large: No valid pricing data
+Price fetched: AmazonEC2 c6i.large = $69.12/month
+Price fetched: AmazonEC2 r7i.metal-24xl = $None/month
+  Skipping r7i.metal-24xl: No valid pricing data
+Price fetched: AmazonEC2 r5dn.8xlarge = $None/month
+  Skipping r5dn.8xlarge: No valid pricing data
+Price fetched: AmazonEC2 r6id.16xlarge = $21466.368/month
+Price fetched: AmazonEC2 g6.12xlarge = $None/month
+  Skipping g6.12xlarge: No valid pricing data
+Price fetched: AmazonEC2 i3en.metal = $17487.36/month
+Price fetched: AmazonEC2 c8g.2xlarge = $258.5088/month
+Price fetched: AmazonEC2 m5a.24xlarge = $4831.2/month
+Price fetched: AmazonEC2 r7i.xlarge = $None/month
+  Skipping r7i.xlarge: No valid pricing data
+Price fetched: AmazonEC2 r6id.large = $476.424/month
+Price fetched: AmazonEC2 m5ad.12xlarge = $15154.559999999998/month
+Price fetched: AmazonEC2 r5ad.16xlarge = $20920.32/month
+Price fetched: AmazonEC2 r5b.8xlarge = $4815.36/month
+Price fetched: AmazonEC2 r5n.metal = $32071.68/month
+Price fetched: AmazonEC2 r6i.16xlarge = $3502.08/month
+Price fetched: AmazonEC2 m5ad.8xlarge = $None/month
+  Skipping m5ad.8xlarge: No valid pricing data
+
+AmazonEC2 pricing completed:
+  1. c6i.large: $69.12/month
+  2. c7g.xlarge: $117.50/month
+  3. r5b.large: $128.16/month
+  4. c7i.xlarge: $193.82/month
+  5. c8g.2xlarge: $258.51/month
+  6. c7gd.2xlarge: $299.38/month
+  7. m7i.2xlarge: $356.83/month
+  8. c4.2xlarge: $425.52/month
+  9. r6id.large: $476.42/month
+  10. c6gd.4xlarge: $506.88/month
+  11. m5d.xlarge: $545.76/month
+  12. m7gd.4xlarge: $756.65/month
+  13. m5zn.3xlarge: $876.96/month
+  14. x2iedn.xlarge: $919.02/month
+  15. r5d.4xlarge: $996.48/month
+  16. g4dn.4xlarge: $1066.32/month
+  17. m7i-flex.xlarge: $1249.50/month
+  18. r5dn.4xlarge: $1340.93/month
+  19. c6id.4xlarge: $2047.68/month
+  20. c5a.12xlarge: $2070.00/month
+  21. r7i.8xlarge: $2227.97/month
+  22. c7i.12xlarge: $2325.89/month
+  23. r5b.4xlarge: $2407.68/month
+  24. r5n.8xlarge: $2440.08/month
+  25. inf1.2xlarge: $2481.12/month
+  26. c5d.12xlarge: $2484.72/month
+  27. g6e.4xlarge: $2659.36/month
+  28. r6i.16xlarge: $3502.08/month
+  29. r7gd.metal: $3767.98/month
+  30. m5zn.12xlarge: $4091.90/month
+  31. r5n.16xlarge: $4101.12/month
+  32. r5b.8xlarge: $4815.36/month
+  33. m5a.24xlarge: $4831.20/month
+  34. x1e.4xlarge: $4864.32/month
+  35. r5dn.24xlarge: $6877.44/month
+  36. c7i.16xlarge: $7852.03/month
+  37. r6id.metal: $8372.74/month
+  38. i3.16xlarge: $9745.92/month
+  39. r6id.32xlarge: $9930.24/month
+  40. m7i.8xlarge: $10067.33/month
+  41. r5b.24xlarge: $14446.08/month
+  42. x2iedn.16xlarge: $14704.27/month
+  43. m5ad.12xlarge: $15154.56/month
+  44. i3en.metal: $17487.36/month
+  45. r5ad.16xlarge: $20920.32/month
+  46. r6id.16xlarge: $21466.37/month
+  47. c7i.metal-48xl: $23556.10/month
+  48. x2idn.16xlarge: $24242.76/month
+  49. x2iedn.24xlarge: $29182.68/month
+  50. x2iedn.metal: $29408.54/month
+  51. r5n.metal: $32071.68/month
+  52. i3en.24xlarge: $35112.96/month
+  Total 52 options available
+
+
+=== Processing AWSElasticBeanstalk ===
+
+Found 0 options for AWSElasticBeanstalk
+  No valid pricing options found for AWSElasticBeanstalk
+
+=== Processing AmazonRDS ===
+
+Found 73 options for AmazonRDS
+Price fetched: AmazonRDS db.m5.2xlarge = $679.68/month
+Price fetched: AmazonRDS db.m5.12xlarge = $8156.159999999999/month
+Price fetched: AmazonRDS db.m5d.large = $419.04/month
+Price fetched: AmazonRDS db.m5.8xlarge = $5436.0/month
+Price fetched: AmazonRDS db.x1e.2xlarge = $None/month
+  Skipping db.x1e.2xlarge: No valid pricing data
+Price fetched: AmazonRDS db.m6gd.16xlarge = $12026.880000000001/month
+Price fetched: AmazonRDS db.r5.24xlarge = $9849.6/month
+Price fetched: AmazonRDS standard = $None/month
+  Skipping standard: No valid pricing data
+Price fetched: AmazonRDS db.z1d.6xlarge = $None/month
+  Skipping db.z1d.6xlarge: No valid pricing data
+Price fetched: AmazonRDS db.m5.xlarge = $679.68/month
+Price fetched: AmazonRDS db.m6i.4xlarge = $2718.72/month
+Price fetched: AmazonRDS db.x1.32xlarge = $None/month
+  Skipping db.x1.32xlarge: No valid pricing data
+Price fetched: AmazonRDS db.r6i.16xlarge = $6566.4/month
+Price fetched: AmazonRDS db.m4.10xlarge = $3479.76/month
+Price fetched: AmazonRDS db.r5d.xlarge = $491.7600000000001/month
+Price fetched: AmazonRDS db.r5b.2xlarge.tpc1.mem2x = $None/month
+  Skipping db.r5b.2xlarge.tpc1.mem2x: No valid pricing data
+Price fetched: AmazonRDS db.x2iedn.2xlarge = $None/month
+  Skipping db.x2iedn.2xlarge: No valid pricing data
+Price fetched: AmazonRDS db.m5.4xlarge = $2718.72/month
+Price fetched: AmazonRDS db.r5d.8xlarge = $3933.3599999999997/month
+Price fetched: AmazonRDS db.m7i.16xlarge = $5690.88/month
+Price fetched: AmazonRDS db.m5.24xlarge = $8156.159999999999/month
+Price fetched: AmazonRDS db.r5.8xlarge = $6566.4/month
+Price fetched: AmazonRDS db.r7i.12xlarge = $10368.0/month
+Price fetched: AmazonRDS db.m4.large = $173.51999999999998/month
+Price fetched: AmazonRDS db.t2.small = $74.88/month
+Price fetched: AmazonRDS db.m6g.4xlarge = $2416.3199999999997/month
+Price fetched: AmazonRDS db.m5d.24xlarge = $20111.039999999997/month
+Price fetched: AmazonRDS db.m6i.large = $169.92/month
+Price fetched: AmazonRDS db.t2.medium = $149.76/month
+Price fetched: AmazonRDS db.r5b.large = $None/month
+  Skipping db.r5b.large: No valid pricing data
+Price fetched: AmazonRDS db.r6i.8xlarge = $6566.4/month
+Price fetched: AmazonRDS db.r5b.16xlarge = $None/month
+  Skipping db.r5b.16xlarge: No valid pricing data
+Price fetched: AmazonRDS db.t2.micro = $37.44/month
+Price fetched: AmazonRDS db.x2iedn.8xlarge = $None/month
+  Skipping db.x2iedn.8xlarge: No valid pricing data
+Price fetched: AmazonRDS db.m7g.8xlarge = $5400.576/month
+Price fetched: AmazonRDS db.r5d.4xlarge = $5548.320000000001/month
+Price fetched: AmazonRDS db.m6gd.xlarge = $375.84000000000003/month
+Price fetched: AmazonRDS db.r6g.2xlarge = $734.4/month
+Price fetched: AmazonRDS db.r7g.12xlarge = $9915.264000000001/month
+Price fetched: AmazonRDS db.r4.xlarge = $821.52/month
+Price fetched: AmazonRDS db.r7i.2xlarge = $863.9999999999999/month
+Price fetched: AmazonRDS db.m6g.xlarge = $604.0799999999999/month
+Price fetched: AmazonRDS db.m7i.xlarge = $355.68/month
+Price fetched: AmazonRDS db.r7i.48xlarge = $41472.0/month
+Price fetched: AmazonRDS db.m5d.xlarge = $1157.76/month
+Price fetched: AmazonRDS db.m5d.4xlarge = $3351.6/month
+Price fetched: AmazonRDS db.m5.16xlarge = $10872.0/month
+Price fetched: AmazonRDS db.m6i.8xlarge = $2718.72/month
+Price fetched: AmazonRDS db.r3.large = $410.4/month
+Price fetched: AmazonRDS db.r5d.12xlarge = $16644.239999999998/month
+Price fetched: AmazonRDS db.m4.2xlarge = $1391.04/month
+Price fetched: AmazonRDS db.r6i.2xlarge = $820.8/month
+Price fetched: AmazonRDS db.r6i.4xlarge = $3283.2/month
+Price fetched: AmazonRDS db.x1.16xlarge = $None/month
+  Skipping db.x1.16xlarge: No valid pricing data
+Price fetched: AmazonRDS db.x1e.16xlarge = $None/month
+  Skipping db.x1e.16xlarge: No valid pricing data
+Price fetched: AmazonRDS db.m6gd.4xlarge = $1503.3600000000001/month
+Price fetched: AmazonRDS db.r7g.4xlarge = $1652.544/month
+Price fetched: AmazonRDS db.r6i.12xlarge = $9849.6/month
+Price fetched: AmazonRDS db.m4.4xlarge = $1391.76/month
+Price fetched: AmazonRDS db.r5d.2xlarge = $983.5200000000002/month
+Price fetched: AmazonRDS db.m5.large = $169.92/month
+Price fetched: AmazonRDS db.t3.small = $74.88/month
+Price fetched: AmazonRDS db.m7i.24xlarge = $17072.64/month
+Price fetched: AmazonRDS db.m6i.24xlarge = $8156.159999999999/month
+Price fetched: AmazonRDS db.t3.large = $149.76/month
+Price fetched: AmazonRDS db.m4.16xlarge = $5552.639999999999/month
+Price fetched: AmazonRDS db.x2iedn.32xlarge = $None/month
+  Skipping db.x2iedn.32xlarge: No valid pricing data
+127.0.0.1 - - [05/Sep/2025 13:57:20] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:23] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:25] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:28] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:30] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:33] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:35] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:38] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:40] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:43] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
+127.0.0.1 - - [05/Sep/2025 13:57:45] "GET /status/f3368333-1613-4d9b-8d47-d69568872dd2 HTTP/1.1" 200 -
