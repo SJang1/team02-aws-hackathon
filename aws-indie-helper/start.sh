@@ -1,28 +1,28 @@
 #!/bin/bash
 
-echo "🚀 AWS Indie Helper 시작 (의존성 없는 버전)"
+echo "🤖 AWS AI Helper 시작"
 
-# 백엔드 실행
-echo "백엔드 서버 시작 중..."
-python3 simple_server.py &
+# AI 프롬프트 생성기 실행
+echo "AI 프롬프트 생성기 시작 중..."
+python3 prompt_generator.py &
 BACKEND_PID=$!
 
 # 잠시 대기
 sleep 2
 
 # 프론트엔드 열기
-echo "프론트엔드 열기..."
+echo "AI 인터페이스 열기..."
 if command -v xdg-open > /dev/null; then
-    xdg-open simple_frontend.html
+    xdg-open ai_interface.html
 elif command -v open > /dev/null; then
-    open simple_frontend.html
+    open ai_interface.html
 else
-    echo "브라우저에서 simple_frontend.html 파일을 열어주세요"
+    echo "브라우저에서 ai_interface.html 파일을 열어주세요"
 fi
 
 echo "✅ 서버 실행 완료!"
-echo "📱 프론트엔드: simple_frontend.html 파일을 브라우저에서 열기"
-echo "🔧 백엔드 API: http://localhost:8000"
+echo "🤖 AI 인터페이스: ai_interface.html 파일을 브라우저에서 열기"
+echo "🔧 프롬프트 생성 API: http://localhost:8000"
 echo ""
 echo "종료하려면 Ctrl+C를 누르세요"
 

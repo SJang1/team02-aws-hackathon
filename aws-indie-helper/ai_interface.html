@@ -1,0 +1,254 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🤖 AWS AI Helper</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: #f5f5f5; }
+        .container { max-width: 1000px; margin: 0 auto; padding: 20px; }
+        .header { text-align: center; margin-bottom: 40px; }
+        .header h1 { color: #232f3e; margin-bottom: 10px; }
+        .header p { color: #666; }
+        
+        .form-section { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); margin-bottom: 30px; }
+        .form-section h2 { color: #232f3e; margin-bottom: 20px; border-bottom: 2px solid #ff9900; padding-bottom: 10px; }
+        
+        .form-group { margin-bottom: 20px; }
+        .form-group label { display: block; margin-bottom: 8px; font-weight: 600; color: #333; }
+        .form-group select, .form-group input, .form-group textarea { 
+            width: 100%; padding: 12px; border: 1px solid #ddd; border-radius: 5px; font-size: 16px; 
+        }
+        .form-group textarea { min-height: 120px; resize: vertical; }
+        
+        .checkbox-group { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
+        .checkbox-item { display: flex; align-items: center; }
+        .checkbox-item input[type="checkbox"] { margin-right: 8px; }
+        
+        .tech-stack { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; }
+        
+        .btn { background: #ff9900; color: white; padding: 15px 30px; border: none; border-radius: 5px; font-size: 16px; cursor: pointer; font-weight: 600; width: 100%; }
+        .btn:hover { background: #e88900; }
+        .btn:disabled { background: #ccc; cursor: not-allowed; }
+        
+        .results { background: white; padding: 30px; border-radius: 10px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); display: none; }
+        .prompt-output { background: #f8f9fa; padding: 20px; border-radius: 8px; border-left: 4px solid #ff9900; }
+        .prompt-text { font-family: 'Courier New', monospace; white-space: pre-wrap; line-height: 1.6; }
+        
+        .loading { text-align: center; padding: 40px; }
+        .copy-btn { background: #28a745; color: white; padding: 8px 16px; border: none; border-radius: 4px; cursor: pointer; margin-top: 10px; }
+        .copy-btn:hover { background: #218838; }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>🤖 AWS AI Helper</h1>
+            <p>AI 기반 맞춤형 AWS 서비스 추천을 위한 프롬프트 생성기</p>
+        </div>
+
+        <form id="promptForm">
+            <!-- 기본 정보 -->
+            <div class="form-section">
+                <h2>📋 기본 정보</h2>
+                
+                <div class="form-group">
+                    <label for="projectType">프로젝트 유형</label>
+                    <select id="projectType" required>
+                        <option value="">선택해주세요</option>
+                        <option value="web_service">웹 서비스</option>
+                        <option value="mobile_app">모바일 앱</option>
+                        <option value="game">게임</option>
+                        <option value="api">API 서비스</option>
+                        <option value="ml_ai">ML/AI 서비스</option>
+                        <option value="iot">IoT 서비스</option>
+                        <option value="blog">블로그/CMS</option>
+                        <option value="ecommerce">이커머스</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="expectedUsers">예상 사용자 수 (일일)</label>
+                    <input type="number" id="expectedUsers" min="1" max="10000000" value="100" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="budget">월 예산 (USD)</label>
+                    <input type="number" id="budget" min="10" max="50000" value="100" step="10" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="region">선호 AWS 리전</label>
+                    <select id="region" required>
+                        <option value="ap-northeast-2">아시아 태평양 (서울)</option>
+                        <option value="us-east-1">미국 동부 (버지니아)</option>
+                        <option value="us-west-2">미국 서부 (오레곤)</option>
+                        <option value="ap-northeast-1">아시아 태평양 (도쿄)</option>
+                        <option value="eu-west-1">유럽 (아일랜드)</option>
+                        <option value="eu-central-1">유럽 (프랑크푸르트)</option>
+                    </select>
+                </div>
+            </div>
+
+            <!-- 기술 스택 -->
+            <div class="form-section">
+                <h2>💻 기술 스택</h2>
+                <div class="tech-stack">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="python" name="tech_stack" value="Python">
+                        <label for="python">Python</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="nodejs" name="tech_stack" value="Node.js">
+                        <label for="nodejs">Node.js</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="react" name="tech_stack" value="React">
+                        <label for="react">React</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="vue" name="tech_stack" value="Vue.js">
+                        <label for="vue">Vue.js</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="java" name="tech_stack" value="Java">
+                        <label for="java">Java</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="dotnet" name="tech_stack" value=".NET">
+                        <label for="dotnet">.NET</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="php" name="tech_stack" value="PHP">
+                        <label for="php">PHP</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="unity" name="tech_stack" value="Unity">
+                        <label for="unity">Unity</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 요구사항 -->
+            <div class="form-section">
+                <h2>⚙️ 서비스 요구사항</h2>
+                <div class="checkbox-group">
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsDatabase">
+                        <label for="needsDatabase">데이터베이스 필요</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsRealtime">
+                        <label for="needsRealtime">실시간 기능 필요</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsCdn">
+                        <label for="needsCdn">CDN 필요</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsAuth">
+                        <label for="needsAuth">사용자 인증 필요</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsMonitoring">
+                        <label for="needsMonitoring">모니터링 필요</label>
+                    </div>
+                    <div class="checkbox-item">
+                        <input type="checkbox" id="needsBackup">
+                        <label for="needsBackup">백업/복구 필요</label>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 추가 요청사항 -->
+            <div class="form-section">
+                <h2>📝 추가 요청사항 (자연어)</h2>
+                <div class="form-group">
+                    <label for="additionalRequirements">구체적인 요구사항이나 특별한 고려사항을 자유롭게 작성해주세요</label>
+                    <textarea id="additionalRequirements" placeholder="예: 한국 사용자 대상이므로 낮은 지연시간이 중요합니다. 향후 글로벌 서비스 확장을 고려하고 있으며, 보안이 매우 중요한 금융 관련 서비스입니다."></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="btn" id="generateBtn">AI 프롬프트 생성하기</button>
+        </form>
+
+        <div id="results" class="results">
+            <div id="loading" class="loading" style="display: none;">
+                <p>AI 프롬프트를 생성 중...</p>
+            </div>
+            
+            <div id="promptOutput" style="display: none;">
+                <h2>🤖 생성된 AI 프롬프트</h2>
+                <div class="prompt-output">
+                    <pre class="prompt-text" id="promptText"></pre>
+                    <button class="copy-btn" onclick="copyPrompt()">프롬프트 복사</button>
+                </div>
+                <p style="margin-top: 15px; color: #666; font-size: 14px;">
+                    💡 이 프롬프트를 Amazon Bedrock이나 다른 AI 서비스에 입력하여 맞춤형 AWS 아키텍처 추천을 받으세요.
+                </p>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        document.getElementById('promptForm').addEventListener('submit', async function(e) {
+            e.preventDefault();
+            
+            // 폼 데이터 수집
+            const formData = {
+                project_type: document.getElementById('projectType').value,
+                expected_users: parseInt(document.getElementById('expectedUsers').value),
+                budget: parseFloat(document.getElementById('budget').value),
+                region: document.getElementById('region').value,
+                tech_stack: Array.from(document.querySelectorAll('input[name="tech_stack"]:checked')).map(cb => cb.value),
+                needs_database: document.getElementById('needsDatabase').checked,
+                needs_realtime: document.getElementById('needsRealtime').checked,
+                needs_cdn: document.getElementById('needsCdn').checked,
+                needs_auth: document.getElementById('needsAuth').checked,
+                needs_monitoring: document.getElementById('needsMonitoring').checked,
+                needs_backup: document.getElementById('needsBackup').checked,
+                additional_requirements: document.getElementById('additionalRequirements').value
+            };
+            
+            // UI 업데이트
+            document.getElementById('results').style.display = 'block';
+            document.getElementById('loading').style.display = 'block';
+            document.getElementById('promptOutput').style.display = 'none';
+            document.getElementById('generateBtn').disabled = true;
+            
+            try {
+                const response = await fetch('http://localhost:8000/api/generate-prompt', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify(formData)
+                });
+                
+                if (response.ok) {
+                    const data = await response.json();
+                    document.getElementById('promptText').textContent = data.generated_prompt;
+                    document.getElementById('promptOutput').style.display = 'block';
+                } else {
+                    throw new Error('서버 오류');
+                }
+            } catch (error) {
+                alert('프롬프트 생성 중 오류가 발생했습니다: ' + error.message);
+            } finally {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('generateBtn').disabled = false;
+            }
+        });
+        
+        function copyPrompt() {
+            const promptText = document.getElementById('promptText').textContent;
+            navigator.clipboard.writeText(promptText).then(() => {
+                alert('프롬프트가 클립보드에 복사되었습니다!');
+            }).catch(() => {
+                alert('복사에 실패했습니다. 텍스트를 직접 선택해서 복사해주세요.');
+            });
+        }
+    </script>
+</body>
+</html>
