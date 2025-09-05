@@ -5,14 +5,70 @@ import uuid
 import time
 from datetime import datetime
 from threading import Thread
+import sqlite3
+import os
 app = Flask(__name__)
 
 # AWS 클라이언트
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
 pricing_client = boto3.client('pricing', region_name='us-east-1')
 
-# 메모리 저장소
-requests_store = {}
+# SQLite DB 초기화
+DB_PATH = 'clops_data.db'
+
+def init_db():
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS requests (
+            uuid TEXT PRIMARY KEY,
+            service_type TEXT,
+            users TEXT,
+            performance TEXT,
+            additional_info TEXT,
+            budget REAL,
+            region TEXT,
+            status TEXT,
+            total_cost REAL,
+            savings REAL,
+            feasible BOOLEAN,
+            error_message TEXT,
+            created_at TIMESTAMP,
+            updated_at TIMESTAMP
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS services (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            request_uuid TEXT,
+            service_name TEXT,
+            service_type TEXT,
+            monthly_cost REAL,
+            quantity INTEGER,
+            reason TEXT,
+            FOREIGN KEY (request_uuid) REFERENCES requests (uuid)
+        )
+    ''')
+    
+    cursor.execute('''
+        CREATE TABLE IF NOT EXISTS contacts (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            uuid TEXT,
+            name TEXT,
+            email TEXT,
+            subject TEXT,
+            message TEXT,
+            status TEXT,
+            created_at TIMESTAMP
+        )
+    ''')
+    
+    conn.commit()
+    conn.close()
+
+init_db()
 
 class AWSOptimizer:
     def __init__(self):
@@ -478,13 +534,96 @@ class AWSOptimizer:
 optimizer = AWSOptimizer()
 
 def store_request(request_uuid, data):
-    if request_uuid in requests_store:
-        requests_store[request_uuid].update(data)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT uuid FROM requests WHERE uuid = ?', (request_uuid,))
+    exists = cursor.fetchone()
+    
+    if exists:
+        cursor.execute('''
+            UPDATE requests SET 
+                status = ?, total_cost = ?, savings = ?, feasible = ?, 
+                error_message = ?, updated_at = ?
+            WHERE uuid = ?
+        ''', (
+            data.get('status'),
+            data.get('total_cost'),
+            data.get('savings'),
+            data.get('feasible'),
+            data.get('error'),
+            data.get('updated_at', datetime.utcnow()),
+            request_uuid
+        ))
+        
+        if 'services' in data:
+            cursor.execute('DELETE FROM services WHERE request_uuid = ?', (request_uuid,))
+            for service in data['services']:
+                cursor.execute('''
+                    INSERT INTO services (request_uuid, service_name, service_type, monthly_cost, quantity, reason)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (
+                    request_uuid,
+                    service.get('name'),
+                    service.get('type'),
+                    service.get('monthly_cost'),
+                    service.get('quantity', 1),
+                    service.get('reason')
+                ))
     else:
-        requests_store[request_uuid] = data
+        cursor.execute('''
+            INSERT INTO requests (uuid, service_type, users, performance, additional_info, 
+                                budget, region, status, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        ''', (
+            request_uuid,
+            data.get('service_type'),
+            data.get('users'),
+            data.get('performance'),
+            data.get('additional_info'),
+            data.get('budget'),
+            data.get('region'),
+            data.get('status'),
+            data.get('created_at', datetime.utcnow()),
+            data.get('updated_at', datetime.utcnow())
+        ))
+    
+    conn.commit()
+    conn.close()
 
 def get_request(request_uuid):
-    return requests_store.get(request_uuid)
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('SELECT * FROM requests WHERE uuid = ?', (request_uuid,))
+    row = cursor.fetchone()
+    
+    if not row:
+        conn.close()
+        return None
+    
+    columns = [desc[0] for desc in cursor.description]
+    result = dict(zip(columns, row))
+    
+    cursor.execute('SELECT * FROM services WHERE request_uuid = ?', (request_uuid,))
+    services_rows = cursor.fetchall()
+    
+    if services_rows:
+        service_columns = [desc[0] for desc in cursor.description]
+        services = []
+        for service_row in services_rows:
+            service_dict = dict(zip(service_columns, service_row))
+            services.append({
+                'name': service_dict['service_name'],
+                'type': service_dict['service_type'],
+                'monthly_cost': service_dict['monthly_cost'],
+                'quantity': service_dict['quantity'],
+                'reason': service_dict['reason']
+            })
+        result['services'] = services
+    
+    conn.close()
+    return result
 
 def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
@@ -569,6 +708,32 @@ def get_status(request_uuid):
         return jsonify({'status': 'not_found'}), 404
     
     return jsonify(result)
+
+@app.route('/contact', methods=['POST'])
+def save_contact():
+    data = request.json
+    contact_uuid = str(uuid.uuid4())
+    
+    conn = sqlite3.connect(DB_PATH)
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO contacts (uuid, name, email, subject, message, status, created_at)
+        VALUES (?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        contact_uuid,
+        data.get('name'),
+        data.get('email'),
+        data.get('subject'),
+        data.get('message'),
+        'received',
+        datetime.utcnow()
+    ))
+    
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'status': 'success', 'uuid': contact_uuid})
 
 @app.route('/health')
 def health():
