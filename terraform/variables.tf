@@ -11,12 +11,19 @@ variable "instance_type" {
 }
 
 variable "key_name" {
-  description = "EC2 Key Pair name"
+  description = "EC2 Key Pair name (optional)"
   type        = string
+  default     = ""
 }
 
 variable "backend_repo" {
   description = "Backend repository URL"
   type        = string
-  default     = "https://github.com/your-repo/backend.git"
+  default     = "https://github.com/SJang1/team02-aws-hackathon.git"
+}
+
+variable "backend_branch" {
+  description = "Backend repository branch"
+  type        = string
+  default     = "be-test"
 }

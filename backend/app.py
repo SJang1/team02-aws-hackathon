@@ -4,45 +4,128 @@ import json
 import uuid
 import time
 from datetime import datetime
-import os
 from threading import Thread
+import pymongo
+from pymongo import MongoClient
+import os
 
 app = Flask(__name__)
 
-# AWS 클라이언트 초기화
+# AWS 클라이언트
 bedrock = boto3.client('bedrock-runtime', region_name='us-east-1')
-pricing = boto3.client('pricing', region_name='us-east-1')
+pricing_client = boto3.client('pricing', region_name='us-east-1')
 
-# 메모리 저장소 (실제 환경에서는 DynamoDB 사용)
-results_store = {}
+# MongoDB 연결
+try:
+    mongo_uri = os.getenv('MONGODB_URI', 'mongodb://localhost:27017/')
+    client = MongoClient(mongo_uri)
+    db = client.cloudoptimizer
+    requests_collection = db.requests
+except Exception as e:
+    print(f"MongoDB connection failed: {e}")
+    requests_collection = None
 
-class AWSServiceEstimator:
+class AWSOptimizer:
     def __init__(self):
-        self.service_costs = {
-            'EC2': {'t2.micro': 8.5, 't2.small': 17, 't2.medium': 34, 't3.medium': 38},
+        self.pricing_cache = {}
+        self.fallback_costs = {
+            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34},
             'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60},
-            'S3': {'standard': 0.023, 'ia': 0.0125},
-            'CloudFront': {'requests': 0.0075, 'data': 0.085},
-            'Lambda': {'requests': 0.0000002, 'duration': 0.0000166667},
-            'API_Gateway': {'requests': 3.5}
+            'S3': {'standard': 23, 'intelligent_tiering': 23},
+            'Lambda': {'requests': 0.2, 'gb_seconds': 16.67}
         }
     
-    def analyze_requirements(self, prompt, budget):
-        """Bedrock을 통한 요구사항 분석"""
+    def get_pricing(self, service, instance_type, region='us-east-1'):
+        cache_key = f"{service}_{instance_type}_{region}"
+        if cache_key in self.pricing_cache:
+            return self.pricing_cache[cache_key]
+        
+        try:
+            if service == 'EC2':
+                price = self._get_ec2_price(instance_type, region)
+            elif service == 'RDS':
+                price = self._get_rds_price(instance_type, region)
+            else:
+                price = self.fallback_costs.get(service, {}).get(instance_type, 50)
+            
+            self.pricing_cache[cache_key] = price
+            return price
+        except:
+            fallback = self.fallback_costs.get(service, {}).get(instance_type, 50)
+            self.pricing_cache[cache_key] = fallback
+            return fallback
+    
+    def _get_ec2_price(self, instance_type, region):
+        location_map = {
+            'us-east-1': 'US East (N. Virginia)',
+            'us-west-2': 'US West (Oregon)',
+            'ap-northeast-2': 'Asia Pacific (Seoul)'
+        }
+        
+        response = pricing_client.get_products(
+            ServiceCode='AmazonEC2',
+            Filters=[
+                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
+                {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'},
+                {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'}
+            ]
+        )
+        
+        if response['PriceList']:
+            price_data = json.loads(response['PriceList'][0])
+            terms = price_data['terms']['OnDemand']
+            for term_key in terms:
+                price_dimensions = terms[term_key]['priceDimensions']
+                for pd_key in price_dimensions:
+                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
+                    return hourly_price * 24 * 30
+        
+        return self.fallback_costs['EC2'].get(instance_type, 50)
+    
+    def _get_rds_price(self, instance_type, region):
+        location_map = {
+            'us-east-1': 'US East (N. Virginia)',
+            'us-west-2': 'US West (Oregon)',
+            'ap-northeast-2': 'Asia Pacific (Seoul)'
+        }
+        
+        response = pricing_client.get_products(
+            ServiceCode='AmazonRDS',
+            Filters=[
+                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
+                {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'},
+                {'Type': 'TERM_MATCH', 'Field': 'deploymentOption', 'Value': 'Single-AZ'}
+            ]
+        )
+        
+        if response['PriceList']:
+            price_data = json.loads(response['PriceList'][0])
+            terms = price_data['terms']['OnDemand']
+            for term_key in terms:
+                price_dimensions = terms[term_key]['priceDimensions']
+                for pd_key in price_dimensions:
+                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
+                    return hourly_price * 24 * 30
+        
+        return self.fallback_costs['RDS'].get(instance_type, 50)
+    
+    def analyze_requirements(self, prompt, budget, region='us-east-1'):
         try:
             bedrock_prompt = f"""
             다음 요구사항을 분석하여 필요한 AWS 서비스를 JSON 형태로 추천해주세요:
             
             {prompt}
+            예산: ${budget}/월
+            리전: {region}
             
-            응답 형식:
+            응답 형식 (JSON만):
             {{
                 "services": [
-                    {{"name": "EC2", "type": "t2.micro", "quantity": 1, "reason": "웹서버용"}},
+                    {{"name": "EC2", "type": "t2.micro", "quantity": 1, "reason": "웹서버"}},
                     {{"name": "RDS", "type": "db.t3.micro", "quantity": 1, "reason": "데이터베이스"}}
-                ],
-                "estimated_cost": 50,
-                "feasible": true
+                ]
             }}
             """
             
@@ -58,146 +141,171 @@ class AWSServiceEstimator:
             result = json.loads(response['body'].read())
             content = result['content'][0]['text']
             
-            # JSON 추출
             start = content.find('{')
             end = content.rfind('}') + 1
             if start != -1 and end != -1:
-                return json.loads(content[start:end])
-            
+                analysis = json.loads(content[start:end])
+                return analysis['services']
         except Exception as e:
-            print(f"Bedrock 오류: {e}")
-            
-        # 폴백 로직
-        return self._fallback_analysis(prompt, budget)
-    
-    def _fallback_analysis(self, prompt, budget):
-        """Bedrock 실패 시 폴백 분석"""
-        services = []
-        total_cost = 0
+            print(f"Bedrock failed: {e}")
         
-        # 기본 웹서비스 구성
+        # 폴백 분석
+        services = []
         if any(word in prompt.lower() for word in ['웹', 'web', 'api']):
             services.append({"name": "EC2", "type": "t2.micro", "quantity": 1, "reason": "웹서버"})
-            total_cost += self.service_costs['EC2']['t2.micro']
-            
             services.append({"name": "RDS", "type": "db.t3.micro", "quantity": 1, "reason": "데이터베이스"})
-            total_cost += self.service_costs['RDS']['db.t3.micro']
         
-        return {
-            "services": services,
-            "estimated_cost": total_cost,
-            "feasible": total_cost <= float(budget)
-        }
+        return services
     
-    def optimize_services(self, services, budget):
-        """서비스 최적화 및 통합"""
+    def optimize_services(self, services, budget, region='us-east-1'):
         optimized = []
         total_cost = 0
         
+        # 가격 계산 및 최적화
         for service in services:
-            service_name = service['name']
-            service_type = service['type']
+            cost = self.get_pricing(service['name'], service['type'], region)
             
-            if service_name in self.service_costs and service_type in self.service_costs[service_name]:
-                cost = self.service_costs[service_name][service_type]
-                if total_cost + cost <= float(budget):
+            if total_cost + cost <= budget:
+                service['monthly_cost'] = round(cost, 2)
+                optimized.append(service)
+                total_cost += cost
+            else:
+                # 더 저렴한 옵션 찾기
+                cheaper = self._find_cheaper_option(service['name'], budget - total_cost, region)
+                if cheaper:
+                    cheaper_cost = self.get_pricing(service['name'], cheaper, region)
+                    service['type'] = cheaper
+                    service['monthly_cost'] = round(cheaper_cost, 2)
+                    service['reason'] += " (비용 최적화)"
                     optimized.append(service)
-                    total_cost += cost
-                else:
-                    # 더 저렴한 옵션 찾기
-                    cheaper_option = self._find_cheaper_option(service_name, float(budget) - total_cost)
-                    if cheaper_option:
-                        optimized.append({
-                            **service,
-                            "type": cheaper_option,
-                            "reason": f"{service['reason']} (비용 최적화)"
-                        })
-                        total_cost += self.service_costs[service_name][cheaper_option]
+                    total_cost += cheaper_cost
         
-        return optimized, total_cost
+        return optimized, round(total_cost, 2)
     
-    def _find_cheaper_option(self, service_name, remaining_budget):
-        """더 저렴한 서비스 옵션 찾기"""
-        if service_name not in self.service_costs:
+    def _find_cheaper_option(self, service_name, remaining_budget, region):
+        options = {
+            'EC2': ['t2.nano', 't2.micro', 't2.small'],
+            'RDS': ['db.t3.micro', 'db.t3.small']
+        }
+        
+        if service_name not in options:
             return None
-            
-        for option, cost in sorted(self.service_costs[service_name].items(), key=lambda x: x[1]):
+        
+        for option in options[service_name]:
+            cost = self.get_pricing(service_name, option, region)
             if cost <= remaining_budget:
                 return option
         return None
 
-estimator = AWSServiceEstimator()
+optimizer = AWSOptimizer()
 
-def process_request(request_uuid, prompt, budget):
-    """비동기 요청 처리"""
+def store_request(request_uuid, data):
+    if requests_collection:
+        try:
+            requests_collection.update_one(
+                {'uuid': request_uuid},
+                {'$set': data},
+                upsert=True
+            )
+        except Exception as e:
+            print(f"MongoDB store failed: {e}")
+
+def get_request(request_uuid):
+    if requests_collection:
+        try:
+            return requests_collection.find_one({'uuid': request_uuid})
+        except Exception as e:
+            print(f"MongoDB get failed: {e}")
+    return None
+
+def process_optimization(request_uuid, prompt, budget, region):
     try:
-        results_store[request_uuid] = {'status': 'processing'}
+        # 상태 업데이트: 분석 중
+        store_request(request_uuid, {
+            'uuid': request_uuid,
+            'status': 'analyzing',
+            'prompt': prompt,
+            'budget': budget,
+            'region': region,
+            'created_at': datetime.utcnow(),
+            'updated_at': datetime.utcnow()
+        })
         
-        # 1. Bedrock 분석
-        analysis = estimator.analyze_requirements(prompt, budget)
+        # 1. 요구사항 분석
+        services = optimizer.analyze_requirements(prompt, budget, region)
+        
+        store_request(request_uuid, {
+            'status': 'optimizing',
+            'services_analyzed': services,
+            'updated_at': datetime.utcnow()
+        })
         
         # 2. 서비스 최적화
-        if analysis['feasible']:
-            optimized_services, final_cost = estimator.optimize_services(analysis['services'], budget)
-            
+        optimized_services, total_cost = optimizer.optimize_services(services, budget, region)
+        
+        # 3. 결과 생성
+        feasible = total_cost <= budget
+        
+        if feasible:
             result = {
                 'status': 'completed',
                 'feasible': True,
                 'services': optimized_services,
-                'total_cost': final_cost,
-                'budget': float(budget),
-                'savings': float(budget) - final_cost
+                'total_cost': total_cost,
+                'budget': budget,
+                'savings': round(budget - total_cost, 2),
+                'region': region
             }
         else:
-            # 3. 서비스 통합 시도
-            optimized_services, final_cost = estimator.optimize_services(analysis['services'], budget)
-            
-            if final_cost <= float(budget):
-                result = {
-                    'status': 'completed',
-                    'feasible': True,
-                    'services': optimized_services,
-                    'total_cost': final_cost,
-                    'budget': float(budget),
-                    'note': '일부 서비스가 최적화되었습니다.'
-                }
-            else:
-                result = {
-                    'status': 'completed',
-                    'feasible': False,
-                    'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${final_cost}가 필요합니다.',
-                    'minimum_budget': final_cost
-                }
+            result = {
+                'status': 'completed',
+                'feasible': False,
+                'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${total_cost}가 필요합니다.',
+                'minimum_budget': total_cost,
+                'budget': budget,
+                'region': region
+            }
         
-        results_store[request_uuid] = result
+        result['updated_at'] = datetime.utcnow()
+        store_request(request_uuid, result)
         
     except Exception as e:
-        results_store[request_uuid] = {
+        store_request(request_uuid, {
             'status': 'failed',
-            'error': str(e)
-        }
+            'error': str(e),
+            'updated_at': datetime.utcnow()
+        })
 
-@app.route('/process', methods=['POST'])
-def process():
+@app.route('/optimize', methods=['POST'])
+def create_optimization():
     data = request.json
-    request_uuid = data.get('uuid')
     prompt = data.get('prompt')
-    budget = data.get('budget')
+    budget = float(data.get('budget', 100))
+    region = data.get('region', 'us-east-1')
+    
+    request_uuid = str(uuid.uuid4())
     
     # 비동기 처리 시작
-    thread = Thread(target=process_request, args=(request_uuid, prompt, budget))
+    thread = Thread(target=process_optimization, args=(request_uuid, prompt, budget, region))
     thread.start()
     
     return jsonify({'uuid': request_uuid, 'status': 'processing'})
 
-@app.route('/result/<request_uuid>')
-def get_result(request_uuid):
-    result = results_store.get(request_uuid, {'status': 'not_found'})
+@app.route('/status/<request_uuid>')
+def get_status(request_uuid):
+    result = get_request(request_uuid)
+    
+    if not result:
+        return jsonify({'status': 'not_found'}), 404
+    
+    # MongoDB ObjectId 제거
+    result.pop('_id', None)
+    
     return jsonify(result)
 
 @app.route('/health')
 def health():
-    return jsonify({'status': 'healthy'})
+    return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)

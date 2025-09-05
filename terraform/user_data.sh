@@ -1,13 +1,16 @@
 #!/bin/bash
+exec > >(tee /var/log/user-data.log|logger -t user-data -s 2>/dev/console) 2>&1
+echo "Starting user-data script"
+
 yum update -y
 yum install -y python3 python3-pip git
 
 # 프론트엔드 설정
 cd /home/ec2-user
-git clone https://github.com/SJang1/team02-aws-hackathon.git || echo "Frontend repo not found"
-cd team02-aws-hackathon/frontend 2>/dev/null || mkdir frontend
+echo "Setting up frontend"
+mkdir -p frontend
+cd frontend
 
-# 프론트엔드 파일 생성 (임시)
 cat > app.py << 'EOF'
 from flask import Flask, render_template, request, jsonify
 import uuid
@@ -27,15 +30,14 @@ def estimate():
     
     request_uuid = str(uuid.uuid4())
     
-    # 백엔드 API 호출
     try:
         response = requests.post('http://localhost:5001/process', json={
             'uuid': request_uuid,
             'prompt': prompt,
             'budget': budget
         })
-    except:
-        pass
+    except Exception as e:
+        print(f"Backend API call failed: {e}")
     
     return jsonify({'uuid': request_uuid})
 
@@ -44,7 +46,8 @@ def poll_result(request_uuid):
     try:
         response = requests.get(f'http://localhost:5001/result/{request_uuid}')
         return response.json()
-    except:
+    except Exception as e:
+        print(f"Backend polling failed: {e}")
         return jsonify({'status': 'processing'})
 
 if __name__ == '__main__':
@@ -133,14 +136,25 @@ cat > templates/index.html << 'EOF'
 </html>
 EOF
 
+echo "Installing Python packages for frontend"
 pip3 install flask requests
+echo "Starting frontend server"
 nohup python3 app.py > frontend.log 2>&1 &
 
 # 백엔드 설정
 cd /home/ec2-user
-git clone ${backend_repo} backend || mkdir backend
-cd backend
+echo "Setting up backend"
+git clone ${backend_repo} team02-aws-hackathon || echo "Repo clone failed"
+cd team02-aws-hackathon || mkdir -p backend
+git checkout ${backend_branch} || echo "Branch checkout failed"
 
+# AWS Pricing API 사용 (서브모듈 불필요)
+echo "Using AWS Pricing API directly"
+
+cd backend || mkdir -p backend
+
+# 백엔드가 없으면 생성
+if [ ! -f app.py ]; then
 cat > app.py << 'EOF'
 from flask import Flask, request, jsonify
 import json
@@ -180,7 +194,7 @@ estimator = AWSServiceEstimator()
 def process_request(request_uuid, prompt, budget):
     try:
         results_store[request_uuid] = {'status': 'processing'}
-        time.sleep(3)  # 시뮬레이션
+        time.sleep(3)
         
         analysis = estimator.analyze_requirements(prompt, budget)
         
@@ -229,6 +243,15 @@ def health():
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5001)
 EOF
+fi
 
-pip3 install flask boto3
+echo "Installing Python packages for backend"
+pip3 install flask boto3 pymongo
+
+# DocumentDB 연결 설정
+export MONGODB_URI="mongodb://admin:cloudoptimizer123@${docdb_endpoint}:27017/?ssl=true&replicaSet=rs0&readPreference=secondaryPreferred&retryWrites=false"
+
+echo "Starting backend server"
 nohup python3 app.py > backend.log 2>&1 &
+
+echo "User-data script completed"

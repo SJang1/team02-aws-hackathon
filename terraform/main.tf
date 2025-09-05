@@ -11,6 +11,13 @@ provider "aws" {
   region = var.aws_region
 }
 
+locals {
+  ami_id = {
+    "us-east-1"      = "ami-0c02fb55956c7d316"
+    "ap-northeast-2" = "ami-0c2d3e23e757b5d84"
+  }[var.aws_region]
+}
+
 # VPC
 resource "aws_vpc" "main" {
   cidr_block           = "10.0.0.0/16"
@@ -166,9 +173,80 @@ resource "aws_iam_role_policy" "bedrock_policy" {
           "pricing:DescribeServices"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "rds:DescribeDBClusters",
+          "rds:DescribeDBInstances"
+        ]
+        Resource = "*"
       }
     ]
   })
+}
+
+# DocumentDB Subnet Group
+resource "aws_docdb_subnet_group" "main" {
+  name       = "cloudoptimizer-docdb-subnet-group"
+  subnet_ids = aws_subnet.public[*].id
+
+  tags = {
+    Name = "cloudoptimizer-docdb-subnet-group"
+  }
+}
+
+# DocumentDB Security Group
+resource "aws_security_group" "docdb" {
+  name_prefix = "cloudoptimizer-docdb-"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 27017
+    to_port         = 27017
+    protocol        = "tcp"
+    security_groups = [aws_security_group.ec2.id]
+  }
+
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+
+  tags = {
+    Name = "cloudoptimizer-docdb-sg"
+  }
+}
+
+# DocumentDB Cluster
+resource "aws_docdb_cluster" "main" {
+  cluster_identifier      = "cloudoptimizer-docdb"
+  engine                  = "docdb"
+  master_username         = "admin"
+  master_password         = "cloudoptimizer123"
+  backup_retention_period = 1
+  preferred_backup_window = "07:00-09:00"
+  skip_final_snapshot     = true
+  db_subnet_group_name    = aws_docdb_subnet_group.main.name
+  vpc_security_group_ids  = [aws_security_group.docdb.id]
+
+  tags = {
+    Name = "cloudoptimizer-docdb"
+  }
+}
+
+# DocumentDB Instance
+resource "aws_docdb_cluster_instance" "main" {
+  count              = 1
+  identifier         = "cloudoptimizer-docdb-${count.index}"
+  cluster_identifier = aws_docdb_cluster.main.id
+  instance_class     = "db.t3.medium"
+
+  tags = {
+    Name = "cloudoptimizer-docdb-instance"
+  }
 }
 
 resource "aws_iam_instance_profile" "ec2_profile" {
@@ -179,9 +257,9 @@ resource "aws_iam_instance_profile" "ec2_profile" {
 # Launch Template
 resource "aws_launch_template" "app" {
   name_prefix   = "cloudoptimizer-"
-  image_id      = "ami-0c2d3e23e757b5d84"  # Amazon Linux 2 AMI for ap-northeast-2
+  image_id      = local.ami_id
   instance_type = var.instance_type
-  key_name      = var.key_name
+  key_name      = var.key_name != "" ? var.key_name : null
 
   vpc_security_group_ids = [aws_security_group.ec2.id]
 
@@ -191,6 +269,8 @@ resource "aws_launch_template" "app" {
 
   user_data = base64encode(templatefile("${path.module}/user_data.sh", {
     backend_repo = var.backend_repo
+    backend_branch = var.backend_branch
+    docdb_endpoint = aws_docdb_cluster.main.endpoint
   }))
 
   tag_specifications {
