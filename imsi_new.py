@@ -248,12 +248,14 @@ class AWSOptimizer:
             options = []
             for option in service_options:
                 price = self.get_pricing(service_name, option, region)
-                if price is not None:
+                if price is not None and price > 0:
                     options.append({
                         'type': option,
                         'monthly_cost': price,
                         'reason': service['reason']
                     })
+                else:
+                    print(f"  Skipping {option}: No valid pricing data")
             
             if options:
                 sorted_options = sorted(options, key=lambda x: x['monthly_cost'])
@@ -265,8 +267,10 @@ class AWSOptimizer:
                 
                 print(f"\n{service_name} pricing completed:")
                 for i, opt in enumerate(sorted_options):
-                    print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']}/month")
+                    print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']:.2f}/month")
                 print(f"  Total {len(sorted_options)} options available\n")
+            else:
+                print(f"  No valid pricing options found for {service_name}")
         
         print(f"\n=== Step 2 Complete: {len(priced_services)} services priced ===\n")
         return priced_services
