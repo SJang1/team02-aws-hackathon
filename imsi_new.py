@@ -451,7 +451,7 @@ class AWSOptimizer:
                 })
             
             bedrock_prompt = f"""
-            AWS 예산 최적화 요청:
+            AWS 서비스 최적화 요청:
             - 예산: ${budget}/월
             - 서비스와 가격 옵션:
             {json.dumps(services_info, ensure_ascii=False, indent=2)}
@@ -565,16 +565,19 @@ class AWSOptimizer:
                 
                 if unit_cost is None:
                     # 선택된 타입이 없으면 가장 가까운 가격 사용
-                    unit_cost = found_service['options'][0]['monthly_cost'] if found_service['options'] else 50
+                    unit_cost = found_service['options'][0]['monthly_cost'] if found_service['options'] else "pricing unavailable"
                     print(f"  Warning: {selected_type} not found for {service_name}, using fallback: ${unit_cost}")
             else:
                 # 서비스를 찾을 수 없으면 폴백 가격 사용
-                unit_cost = self.fallback_costs.get(service_name, {}).get(selected_type, 50)
+                unit_cost = self.fallback_costs.get(service_name, {}).get(selected_type, "pricing unavailable")
                 print(f"  Warning: Service {service_name} not found, using fallback: ${unit_cost}")
             
             # 총 비용 계산 (단가 × 수량)
-            total_cost = unit_cost * quantity
-            
+            if unit_cost == "pricing unavailable":
+                total_cost = "pricing unavailable"
+            else:
+                total_cost = unit_cost * quantity
+
             calculated_service = {
                 'name': service_name,
                 'type': selected_type,
