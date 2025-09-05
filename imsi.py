@@ -18,9 +18,12 @@ class AWSOptimizer:
     def __init__(self):
         self.pricing_cache = {}
         self.fallback_costs = {
-            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34},
-            'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60},
+            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34, 't3.medium': 38, 't3.large': 76},
+            'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
+            'RDS_READ_REPLICA': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
             'S3': {'standard': 23, 'intelligent_tiering': 23},
+            'ALB': {'application': 22},
+            'SageMaker': {'ml.t3.medium': 45},
             'Lambda': {'requests': 0.2, 'gb_seconds': 16.67}
         }
     
@@ -30,84 +33,137 @@ class AWSOptimizer:
             return self.pricing_cache[cache_key]
         
         try:
-            if service == 'EC2':
-                price = self._get_ec2_price(instance_type, region)
-            elif service == 'RDS':
-                price = self._get_rds_price(instance_type, region)
-            else:
-                price = self.fallback_costs.get(service, {}).get(instance_type, 50)
-            
+            price = self._get_aws_service_price(service, instance_type, region)
             self.pricing_cache[cache_key] = price
             return price
-        except:
+        except Exception as e:
+            print(f"Pricing API failed for {service} {instance_type}: {e}")
             fallback = self.fallback_costs.get(service, {}).get(instance_type, 50)
             self.pricing_cache[cache_key] = fallback
             return fallback
     
-    def _get_ec2_price(self, instance_type, region):
+    def _get_aws_service_price(self, service, instance_type, region):
         location_map = {
             'us-east-1': 'US East (N. Virginia)',
             'us-west-2': 'US West (Oregon)',
-            'ap-northeast-2': 'Asia Pacific (Seoul)'
+            'ap-northeast-2': 'Asia Pacific (Seoul)',
+            'eu-west-1': 'Europe (Ireland)',
+            'ap-southeast-1': 'Asia Pacific (Singapore)'
         }
         
+        # 서비스별 설정
+        service_configs = {
+            'EC2': {
+                'ServiceCode': 'AmazonEC2',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'},
+                    {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'},
+                    {'Type': 'TERM_MATCH', 'Field': 'preInstalledSw', 'Value': 'NA'}
+                ]
+            },
+            'RDS': {
+                'ServiceCode': 'AmazonRDS',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'},
+                    {'Type': 'TERM_MATCH', 'Field': 'deploymentOption', 'Value': 'Single-AZ'}
+                ]
+            },
+            'RDS_READ_REPLICA': {
+                'ServiceCode': 'AmazonRDS',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
+                    {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'}
+                ]
+            },
+            'ALB': {
+                'ServiceCode': 'AWSELB',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Load Balancer-Application'}
+                ]
+            },
+            'SageMaker': {
+                'ServiceCode': 'AmazonSageMaker',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type}
+                ]
+            },
+            'S3': {
+                'ServiceCode': 'AmazonS3',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'storageClass', 'Value': 'General Purpose'}
+                ]
+            },
+            'Lambda': {
+                'ServiceCode': 'AWSLambda',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'group', 'Value': 'AWS-Lambda-Requests'}
+                ]
+            },
+            'CloudFront': {
+                'ServiceCode': 'AmazonCloudFront',
+                'filters': [
+                    {'Type': 'TERM_MATCH', 'Field': 'productFamily', 'Value': 'Data Transfer'}
+                ]
+            }
+        }
+        
+        if service not in service_configs:
+            return self.fallback_costs.get(service, {}).get(instance_type, 50)
+        
+        config = service_configs[service]
+        filters = config['filters'].copy()
+        
+        # 위치 필터 추가
+        filters.append({
+            'Type': 'TERM_MATCH', 
+            'Field': 'location', 
+            'Value': location_map.get(region, 'US East (N. Virginia)')
+        })
+        
         response = pricing_client.get_products(
-            ServiceCode='AmazonEC2',
-            Filters=[
-                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
-                {'Type': 'TERM_MATCH', 'Field': 'operatingSystem', 'Value': 'Linux'},
-                {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'}
-            ]
+            ServiceCode=config['ServiceCode'],
+            Filters=filters
         )
         
         if response['PriceList']:
             price_data = json.loads(response['PriceList'][0])
-            terms = price_data['terms']['OnDemand']
-            for term_key in terms:
-                price_dimensions = terms[term_key]['priceDimensions']
-                for pd_key in price_dimensions:
-                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
-                    return hourly_price * 24 * 30
+            
+            # OnDemand 가격 추출
+            if 'terms' in price_data and 'OnDemand' in price_data['terms']:
+                terms = price_data['terms']['OnDemand']
+                for term_key in terms:
+                    price_dimensions = terms[term_key]['priceDimensions']
+                    for pd_key in price_dimensions:
+                        price_per_unit = price_dimensions[pd_key]['pricePerUnit']['USD']
+                        if price_per_unit and float(price_per_unit) > 0:
+                            hourly_price = float(price_per_unit)
+                            
+                            # 서비스별 월 비용 계산
+                            if service in ['EC2', 'RDS', 'RDS_READ_REPLICA', 'SageMaker']:
+                                return hourly_price * 24 * 30  # 시간당 → 월
+                            elif service == 'ALB':
+                                return hourly_price * 24 * 30 + 22.5  # ALB 기본 요금
+                            elif service == 'S3':
+                                return hourly_price * 1000  # GB당 → 월 (1TB 기준)
+                            else:
+                                return hourly_price * 24 * 30
         
-        return self.fallback_costs['EC2'].get(instance_type, 50)
+        return self.fallback_costs.get(service, {}).get(instance_type, 50)
     
-    def _get_rds_price(self, instance_type, region):
-        location_map = {
-            'us-east-1': 'US East (N. Virginia)',
-            'us-west-2': 'US West (Oregon)',
-            'ap-northeast-2': 'Asia Pacific (Seoul)'
-        }
-        
-        response = pricing_client.get_products(
-            ServiceCode='AmazonRDS',
-            Filters=[
-                {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
-                {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')},
-                {'Type': 'TERM_MATCH', 'Field': 'databaseEngine', 'Value': 'MySQL'},
-                {'Type': 'TERM_MATCH', 'Field': 'deploymentOption', 'Value': 'Single-AZ'}
-            ]
-        )
-        
-        if response['PriceList']:
-            price_data = json.loads(response['PriceList'][0])
-            terms = price_data['terms']['OnDemand']
-            for term_key in terms:
-                price_dimensions = terms[term_key]['priceDimensions']
-                for pd_key in price_dimensions:
-                    hourly_price = float(price_dimensions[pd_key]['pricePerUnit']['USD'])
-                    return hourly_price * 24 * 30
-        
-        return self.fallback_costs['RDS'].get(instance_type, 50)
-    
-    def analyze_requirements(self, prompt, budget, region='us-east-1'):
+    def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
         try:
             bedrock_prompt = f"""
-            다음 요구사항을 분석하여 필요한 AWS 서비스를 JSON 형태로 추천해주세요:
+            AWS 서비스 추천 요청:
+            - 서비스 유형: {service_type}
+            - 예상 사용자 수: {users}
+            - 성능 요구사항: {performance}
+            - 추가 요구사항: {additional_info}
+            - 예산: ${budget}/월
+            - 리전: {region}
             
-            {prompt}
-            예산: ${budget}/월
-            리전: {region}
+            On-Demand 인스턴스 타입을 사용하며, 최대한 예산 범위 내에서 "최대한 크게 넉넉히" 추천합니다.
             
             응답 형식 (JSON만):
             {{
@@ -128,13 +184,13 @@ class AWSOptimizer:
                     }
                 ],
                 "inferenceConfig": {
-                    "max_new_tokens": 1000,
+                    "max_new_tokens": 800000,
                     "temperature": 0.3
                 }
             })
             
             response = bedrock.invoke_model(
-                modelId="amazon.nova-micro-v1:0",
+                modelId="amazon.nova-premier-v1:0",
                 body=body,
                 contentType="application/json"
             )
@@ -151,10 +207,160 @@ class AWSOptimizer:
             print(f"Bedrock failed: {e}")
         
         # 폴백 분석
+        return self._fallback_analysis(service_type, users, performance, additional_info)
+    
+    def _fallback_analysis(self, service_type, users, performance, additional_info):
         services = []
-        if any(word in prompt.lower() for word in ['웹', 'web', 'api']):
-            services.append({"name": "EC2", "type": "t2.micro", "quantity": 1, "reason": "웹서버"})
-            services.append({"name": "RDS", "type": "db.t3.micro", "quantity": 1, "reason": "데이터베이스"})
+        
+        # 사용자 규모 정규화
+        if users in ['소규모', '1-100명', '100명 이하']:
+            user_scale = 'small'
+        elif users in ['중간규모', '100-1,000명', '1000명 이하']:
+            user_scale = 'medium'
+        elif users in ['대규모', '1,000-10,000명', '10000명 이하']:
+            user_scale = 'large'
+        elif users in ['엔터프라이즈', '10,000명+', '10000명 이상']:
+            user_scale = 'enterprise'
+        else:
+            # 기타 옵션으로 직접 입력한 경우
+            if any(word in users.lower() for word in ['100', '소규모', 'small']):
+                user_scale = 'small'
+            elif any(word in users.lower() for word in ['1000', '중간', 'medium']):
+                user_scale = 'medium'
+            elif any(word in users.lower() for word in ['10000', '대규모', 'large']):
+                user_scale = 'large'
+            else:
+                user_scale = 'medium'  # 기본값
+        
+        # 서비스 유형 처리 (기타 옵션 포함)
+        if service_type in ['웹사이트', 'API'] or any(word in service_type.lower() for word in ['web', 'api', '웹', '사이트']):
+            # 사용자 규모에 따른 EC2 인스턴스 선택
+            if user_scale == 'small':  # 1-100명
+                ec2_type = 't2.micro'
+                instance_count = 1
+            elif user_scale == 'medium':  # 100-1,000명
+                ec2_type = 't2.small'
+                instance_count = 1
+            elif user_scale == 'large':  # 1,000-10,000명
+                ec2_type = 't2.medium'
+                instance_count = 2  # 로드 밸런싱을 위한 다중 인스턴스
+            else:  # 엔터프라이즈 10,000명+
+                ec2_type = 't3.large'
+                instance_count = 3
+            
+            # 성능 요구사항에 따른 인스턴스 업그레이드
+            if performance in ['고성능', '최고성능']:
+                if ec2_type == 't2.micro':
+                    ec2_type = 't2.small'
+                elif ec2_type == 't2.small':
+                    ec2_type = 't2.medium'
+                elif ec2_type == 't2.medium':
+                    ec2_type = 't3.medium'
+            
+            services.append({
+                "name": "EC2", 
+                "type": ec2_type, 
+                "quantity": instance_count, 
+                "reason": f"웹서버/API서버 ({users} 사용자 대응)"
+            })
+            
+            # 로드 밸런서 추가 (대규모 이상)
+            if user_scale in ['large', 'enterprise']:
+                services.append({
+                    "name": "ALB", 
+                    "type": "application", 
+                    "quantity": 1, 
+                    "reason": "로드 밸런싱 및 고가용성"
+                })
+            
+            # 데이터베이스 추가 (사용자 규모에 따른 크기 조정)
+            if '데이터베이스' in additional_info or service_type == '웹사이트':
+                if user_scale == 'small':
+                    rds_type = 'db.t3.micro'
+                elif user_scale == 'medium':
+                    rds_type = 'db.t3.small'
+                elif user_scale == 'large':
+                    rds_type = 'db.t3.medium'
+                else:  # enterprise
+                    rds_type = 'db.t3.large'
+                
+                services.append({
+                    "name": "RDS", 
+                    "type": rds_type, 
+                    "quantity": 1, 
+                    "reason": f"데이터베이스 ({users} 사용자 대응)"
+                })
+        
+        elif service_type == '데이터베이스' or 'database' in service_type.lower() or 'db' in service_type.lower():
+            # 사용자 규모에 따른 데이터베이스 크기 선택
+            if user_scale == 'small':
+                rds_type = 'db.t3.micro'
+                read_replicas = 0
+            elif user_scale == 'medium':
+                rds_type = 'db.t3.small'
+                read_replicas = 1
+            elif user_scale == 'large':
+                rds_type = 'db.t3.medium'
+                read_replicas = 2
+            else:  # enterprise
+                rds_type = 'db.t3.large'
+                read_replicas = 3
+            
+            services.append({
+                "name": "RDS", 
+                "type": rds_type, 
+                "quantity": 1, 
+                "reason": f"메인 데이터베이스 ({users} 사용자 대응)"
+            })
+            
+            # 읽기 전용 복제본 추가 (중간규모 이상)
+            if read_replicas > 0:
+                services.append({
+                    "name": "RDS_READ_REPLICA", 
+                    "type": rds_type, 
+                    "quantity": read_replicas, 
+                    "reason": f"읽기 성능 향상을 위한 복제본"
+                })
+        
+        elif service_type == '머신러닝' or any(word in service_type.lower() for word in ['ml', 'ai', 'machine', 'learning']):
+            # ML 워크로드는 사용자 수보다 데이터 처리량에 따라 결정
+            if user_scale in ['small', 'medium']:
+                ec2_type = 't3.medium'
+            else:
+                ec2_type = 't3.large'
+            
+            services.append({
+                "name": "EC2", 
+                "type": ec2_type, 
+                "quantity": 1, 
+                "reason": f"ML 워크로드 ({users} 사용자 대응)"
+            })
+            services.append({
+                "name": "S3", 
+                "type": "standard", 
+                "quantity": 1, 
+                "reason": "ML 데이터 저장소"
+            })
+            
+            # 대규모 ML 워크로드에 SageMaker 추가
+            if user_scale in ['large', 'enterprise']:
+                services.append({
+                    "name": "SageMaker", 
+                    "type": "ml.t3.medium", 
+                    "quantity": 1, 
+                    "reason": "대규모 ML 모델 학습 및 배포"
+                })
+        
+        elif service_type == '스토리지' or any(word in service_type.lower() for word in ['storage', 'file', '파일', '저장']):
+            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "파일 저장소"})
+        
+        elif service_type == '분석' or any(word in service_type.lower() for word in ['analytics', 'analysis', '분석']):
+            services.append({"name": "EC2", "type": 't3.medium', "quantity": 1, "reason": "데이터 분석 서버"})
+            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "데이터 레이크"})
+        
+        else:
+            # 기타 서비스 유형에 대한 기본 처리
+            services.append({"name": "EC2", "type": 't2.small', "quantity": 1, "reason": f"{service_type} 서버"})
         
         return services
     
@@ -185,8 +391,11 @@ class AWSOptimizer:
     
     def _find_cheaper_option(self, service_name, remaining_budget, region):
         options = {
-            'EC2': ['t2.nano', 't2.micro', 't2.small'],
-            'RDS': ['db.t3.micro', 'db.t3.small']
+            'EC2': ['t2.nano', 't2.micro', 't2.small', 't2.medium'],
+            'RDS': ['db.t3.micro', 'db.t3.small', 'db.t3.medium'],
+            'RDS_READ_REPLICA': ['db.t3.micro', 'db.t3.small', 'db.t3.medium'],
+            'ALB': ['application'],
+            'SageMaker': ['ml.t3.medium']
         }
         
         if service_name not in options:
@@ -209,21 +418,22 @@ def store_request(request_uuid, data):
 def get_request(request_uuid):
     return requests_store.get(request_uuid)
 
-def process_optimization(request_uuid, prompt, budget, region):
+def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
-        # 상태 업데이트: 분석 중
         store_request(request_uuid, {
             'uuid': request_uuid,
             'status': 'analyzing',
-            'prompt': prompt,
+            'service_type': service_type,
+            'users': users,
+            'performance': performance,
+            'additional_info': additional_info,
             'budget': budget,
             'region': region,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         })
         
-        # 1. 요구사항 분석
-        services = optimizer.analyze_requirements(prompt, budget, region)
+        services = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region)
         
         store_request(request_uuid, {
             'status': 'optimizing',
@@ -270,14 +480,18 @@ def process_optimization(request_uuid, prompt, budget, region):
 @app.route('/optimize', methods=['POST'])
 def create_optimization():
     data = request.json
-    prompt = data.get('prompt')
+    
+    # {"service_type":"API","users":"엔터프라이즈","performance":"최고성능","additional_info":"","budget":1000000,"region":"ap-northeast-2"}
+    service_type = data.get('service_type', '')
+    users = data.get('users', '선택안됨')
+    performance = data.get('performance', '선택안됨')
+    additional_info = data.get('additional_info', '정보없음')
     budget = float(data.get('budget', 100))
     region = data.get('region', 'us-east-1')
     
     request_uuid = str(uuid.uuid4())
     
-    # 비동기 처리 시작
-    thread = Thread(target=process_optimization, args=(request_uuid, prompt, budget, region))
+    thread = Thread(target=process_optimization, args=(request_uuid, service_type, users, performance, additional_info, budget, region))
     thread.start()
     
     return jsonify({'uuid': request_uuid, 'status': 'processing'})

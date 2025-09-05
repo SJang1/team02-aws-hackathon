@@ -94,12 +94,12 @@
             <label for="serviceType">서비스 유형:</label>
             <select id="serviceType" required>
                 <option value="">선택하세요</option>
-                <option value="웹사이트">웹사이트/웹앱</option>
-                <option value="API">API 서버</option>
+                <option value="웹사이트/웹앱">웹사이트/웹앱</option>
+                <option value="API 서버">API 서버</option>
                 <option value="데이터베이스">데이터베이스</option>
-                <option value="머신러닝">머신러닝/AI</option>
-                <option value="스토리지">파일 저장소</option>
-                <option value="분석">데이터 분석</option>
+                <option value="머신러닝/AI">머신러닝/AI</option>
+                <option value="파일 저장소">파일 저장소</option>
+                <option value="데이터 분석">데이터 분석</option>
                 <option value="기타">기타</option>
             </select>
             <input type="text" id="customServiceType" class="custom-input" placeholder="서비스 유형을 직접 입력하세요">
@@ -110,10 +110,10 @@
                 <label for="expectedUsers">예상 사용자 수:</label>
                 <select id="expectedUsers" required>
                     <option value="">선택하세요</option>
-                    <option value="소규모">소규모 (1-100명)</option>
-                    <option value="중간규모">중간규모 (100-1,000명)</option>
-                    <option value="대규모">대규모 (1,000-10,000명)</option>
-                    <option value="엔터프라이즈">엔터프라이즈 (10,000명+)</option>
+                    <option value="소규모 (1-100명)">소규모 (1-100명)</option>
+                    <option value="중간규모 (100-1,000명)">중간규모 (100-1,000명)</option>
+                    <option value="대규모 (1,000-10,000명)">대규모 (1,000-10,000명)</option>
+                    <option value="엔터프라이즈 (10,000명+)">엔터프라이즈 (10,000명+)</option>
                     <option value="기타">기타</option>
                 </select>
                 <input type="text" id="customExpectedUsers" class="custom-input" placeholder="사용자 수를 직접 입력하세요">
@@ -209,18 +209,18 @@
             const additionalInfo = document.getElementById('additionalInfo').value;
             const budget = document.getElementById('budget').value;
             
-            // imsi.py 백엔드 형식에 맞게 프롬프트 구성
-            const prompt = `서비스 유형: ${serviceType}, 예상 사용자: ${expectedUsers}, 성능: ${performance}, 추가 요구사항: ${additionalInfo || '없음'}`;
-            
             document.getElementById('result').style.display = 'block';
             
             try {
-                const response = await fetch('/estimate', {
+                const response = await fetch('/optimize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: prompt, 
-                        budget: budget,
+                        service_type: serviceType,
+                        users: expectedUsers,
+                        performance: performance,
+                        additional_info: additionalInfo || '',
+                        budget: parseInt(budget),
                         region: region 
                     })
                 });
@@ -237,7 +237,7 @@
         
         async function pollResult(uuid) {
             try {
-                const response = await fetch(`/poll/${uuid}`);
+                const response = await fetch(`/status/${uuid}`);
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
