@@ -279,7 +279,7 @@ class AWSOptimizer:
 
             가격은 고려 말고 필요할 거 같은 모든 서비스를 나열해 주세요!
 
-            
+            예시 서비스:
             - AmazonCloudFront (CDN, DDoS 보호)
             - AWSWAF (웹 방화벽)
             - ElasticLoadBalancingV2 (로드밸런싱)
@@ -462,7 +462,7 @@ class AWSOptimizer:
             3. 서버/데이터베이스 장애
             4. 네트워크 장애
 
-            
+            필요에 따라서 EC2 인스턴스를 2대 이상 운영하는 등 이중화 구성을 고려하세요. 다만 이 경우 Load Balancer도 함께 고려해야 합니다.
             
             우선순위:
             1. 가용성 > 성능 > 비용
