@@ -17,12 +17,15 @@ def estimate():
     # UUID 생성 및 백엔드로 요청
     request_uuid = str(uuid.uuid4())
     
-    # 백엔드 API 호출 (실제 구현 시 URL 변경 필요)
-    # response = requests.post('http://backend-api/process', {
-    #     'uuid': request_uuid,
-    #     'prompt': prompt,
-    #     'budget': budget
-    # })
+    # 백엔드 API 호출
+    try:
+        response = requests.post('http://localhost:5001/process', json={
+            'uuid': request_uuid,
+            'prompt': prompt,
+            'budget': budget
+        })
+    except Exception as e:
+        print(f"Backend API 호출 실패: {e}")
     
     print(f"Generated prompt for UUID {request_uuid}:")
     print(prompt)
@@ -31,12 +34,13 @@ def estimate():
 
 @app.route('/poll/<request_uuid>')
 def poll_result(request_uuid):
-    # 백엔드에서 결과 폴링 (실제 구현 시 URL 변경 필요)
-    # response = requests.get(f'http://backend-api/result/{request_uuid}')
-    # return response.json()
-    
-    # 임시 응답
-    return jsonify({'status': 'processing'})
+    # 백엔드에서 결과 폴링
+    try:
+        response = requests.get(f'http://localhost:5001/result/{request_uuid}')
+        return response.json()
+    except Exception as e:
+        print(f"Backend polling 실패: {e}")
+        return jsonify({'status': 'processing'})
 
 if __name__ == '__main__':
     app.run(debug=True)
