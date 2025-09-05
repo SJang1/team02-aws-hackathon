@@ -230,7 +230,7 @@ class AWSOptimizer:
                             hourly_price = float(price_per_unit)
                             return hourly_price * 24 * 30
                         else:
-                            return 0.1
+                            return 0
         
         return None
     
@@ -592,7 +592,7 @@ class AWSOptimizer:
             
             print(f"  {service_name} ({selected_type}): ${unit_cost}/월 × {quantity}대 = ${total_cost}/월")
         
-        total_monthly_cost = sum(service['total_monthly_cost'] for service in calculated_services)
+        total_monthly_cost = sum(service['total_monthly_cost'] for service in calculated_services if isinstance(service['total_monthly_cost'], (int, float)))
         print(f"\n  Total Monthly Cost: ${total_monthly_cost:.2f}")
         print("=== Step 4 Complete ===\n")
         
@@ -674,7 +674,7 @@ class AWSOptimizer:
         print(f"Optimization Complete!")
         print(f"Selected {len(optimized_services)} services")
         print(f"Total Cost: ${total_cost:.2f}/month")
-        print(f"Budget Utilization: {(total_cost/budget)*100:.1f}%")
+        print(f"Budget Utilization: {((total_cost/budget)*100) if budget > 0 else 0:.1f}%")
         print(f"{'='*60}\n")
         
         return optimized_services, total_cost
@@ -816,13 +816,13 @@ def process_optimization(request_uuid, service_type, users, performance, additio
                 'total_cost': round(total_cost, 2),
                 'budget': budget,
                 'savings': round(budget - total_cost, 2),
-                'budget_utilization': round((total_cost/budget)*100, 1),
+                'budget_utilization': round((total_cost/budget)*100, 1) if budget > 0 else 0,
                 'region': region,
                 'cost_breakdown': {
-                    'compute': sum(s['total_monthly_cost'] for s in optimized_services if 'EC2' in s['name'] or 'Lambda' in s['name']),
-                    'storage': sum(s['total_monthly_cost'] for s in optimized_services if 'S3' in s['name'] or 'RDS' in s['name']),
-                    'networking': sum(s['total_monthly_cost'] for s in optimized_services if 'CloudFront' in s['name'] or 'LoadBalancing' in s['name']),
-                    'other': sum(s['total_monthly_cost'] for s in optimized_services if not any(x in s['name'] for x in ['EC2', 'Lambda', 'S3', 'RDS', 'CloudFront', 'LoadBalancing']))
+                    'compute': sum(s['total_monthly_cost'] for s in optimized_services if ('EC2' in s['name'] or 'Lambda' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                    'storage': sum(s['total_monthly_cost'] for s in optimized_services if ('S3' in s['name'] or 'RDS' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                    'networking': sum(s['total_monthly_cost'] for s in optimized_services if ('CloudFront' in s['name'] or 'LoadBalancing' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                    'other': sum(s['total_monthly_cost'] for s in optimized_services if not any(x in s['name'] for x in ['EC2', 'Lambda', 'S3', 'RDS', 'CloudFront', 'LoadBalancing']) and isinstance(s['total_monthly_cost'], (int, float)))
                 }
             }
         else:
