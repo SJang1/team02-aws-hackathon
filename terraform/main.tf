@@ -430,7 +430,19 @@ PYTHON_EOF
               
               # Wait for RDS to be ready
               echo "Waiting for RDS to be ready..."
-              sleep 30
+              sleep 60
+              
+              # Test RDS connection
+              yum install -y mysql
+              for i in {1..10}; do
+                if mysql -h ${aws_db_instance.main.endpoint} -u ${aws_db_instance.main.username} -p${random_password.db_password.result} -e "SELECT 1;" 2>/dev/null; then
+                  echo "RDS is ready!"
+                  break
+                else
+                  echo "RDS not ready, waiting... ($i/10)"
+                  sleep 30
+                fi
+              done
               EOF
 
   tags = {

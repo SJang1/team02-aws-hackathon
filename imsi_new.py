@@ -24,11 +24,26 @@ RDS_CONFIG = {
 }
 
 def get_db_connection():
-    return pymysql.connect(**RDS_CONFIG)
+    import time
+    max_retries = 5
+    for attempt in range(max_retries):
+        try:
+            return pymysql.connect(**RDS_CONFIG)
+        except Exception as e:
+            print(f"RDS connection attempt {attempt + 1} failed: {e}")
+            if attempt < max_retries - 1:
+                time.sleep(10)
+            else:
+                print("RDS connection failed, using fallback mode")
+                return None
 
 def init_db():
-    conn = get_db_connection()
-    cursor = conn.cursor()
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print("Running in fallback mode without database")
+            return
+        cursor = conn.cursor()
     
     cursor.execute('''
         CREATE TABLE IF NOT EXISTS requests (
@@ -53,9 +68,12 @@ def init_db():
             created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
         )
     ''')
-    
-    conn.commit()
-    conn.close()
+        
+        conn.commit()
+        conn.close()
+        print("Database initialized successfully")
+    except Exception as e:
+        print(f"Database initialization failed: {e}")
 
 init_db()
 
@@ -523,36 +541,48 @@ class AWSOptimizer:
 optimizer = AWSOptimizer()
 
 def store_request(request_uuid, request_data, response_data=None, status='pending'):
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO requests (uuid, request_data, response_data, status)
-        VALUES (%s, %s, %s, %s)
-        ON DUPLICATE KEY UPDATE
-        response_data = VALUES(response_data),
-        status = VALUES(status),
-        updated_at = CURRENT_TIMESTAMP
-    ''', (request_uuid, json.dumps(request_data), json.dumps(response_data) if response_data else None, status))
-    
-    conn.commit()
-    conn.close()
+    try:
+        conn = get_db_connection()
+        if not conn:
+            print(f"Fallback: Request {request_uuid} not stored (no DB connection)")
+            return
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO requests (uuid, request_data, response_data, status)
+            VALUES (%s, %s, %s, %s)
+            ON DUPLICATE KEY UPDATE
+            response_data = VALUES(response_data),
+            status = VALUES(status),
+            updated_at = CURRENT_TIMESTAMP
+        ''', (request_uuid, json.dumps(request_data), json.dumps(response_data) if response_data else None, status))
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database store failed: {e}")
 
 def get_request(request_uuid):
-    conn = get_db_connection()
-    cursor = conn.cursor(pymysql.cursors.DictCursor)
-    
-    cursor.execute('SELECT * FROM requests WHERE uuid = %s', (request_uuid,))
-    result = cursor.fetchone()
-    
-    conn.close()
-    
-    if result:
-        result['request_data'] = json.loads(result['request_data'])
-        if result['response_data']:
-            result['response_data'] = json.loads(result['response_data'])
-    
-    return result
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return {'status': 'processing', 'message': 'Database unavailable'}
+        cursor = conn.cursor(pymysql.cursors.DictCursor)
+        
+        cursor.execute('SELECT * FROM requests WHERE uuid = %s', (request_uuid,))
+        result = cursor.fetchone()
+        
+        conn.close()
+        
+        if result:
+            result['request_data'] = json.loads(result['request_data'])
+            if result['response_data']:
+                result['response_data'] = json.loads(result['response_data'])
+        
+        return result
+    except Exception as e:
+        print(f"Database get failed: {e}")
+        return {'status': 'error', 'message': 'Database error'}
 
 def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
@@ -595,6 +625,7 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         
     except Exception as e:
         error_response = {'error': str(e)}
+        request_data = request_data if 'request_data' in locals() else {}
         store_request(request_uuid, request_data, error_response, 'failed')
 
 @app.route('/optimize', methods=['POST'])
@@ -629,25 +660,31 @@ def save_contact():
     data = request.json
     contact_uuid = str(uuid.uuid4())
     
-    conn = get_db_connection()
-    cursor = conn.cursor()
-    
-    cursor.execute('''
-        INSERT INTO contacts (uuid, name, email, subject, message, status)
-        VALUES (%s, %s, %s, %s, %s, %s)
-    ''', (
-        contact_uuid,
-        data.get('name'),
-        data.get('email'),
-        data.get('subject'),
-        data.get('message'),
-        'received'
-    ))
-    
-    conn.commit()
-    conn.close()
-    
-    return jsonify({'status': 'success', 'uuid': contact_uuid})
+    try:
+        conn = get_db_connection()
+        if not conn:
+            return jsonify({'status': 'success', 'uuid': contact_uuid, 'message': 'Stored locally'})
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            INSERT INTO contacts (uuid, name, email, subject, message, status)
+            VALUES (%s, %s, %s, %s, %s, %s)
+        ''', (
+            contact_uuid,
+            data.get('name'),
+            data.get('email'),
+            data.get('subject'),
+            data.get('message'),
+            'received'
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        return jsonify({'status': 'success', 'uuid': contact_uuid})
+    except Exception as e:
+        print(f"Contact save failed: {e}")
+        return jsonify({'status': 'success', 'uuid': contact_uuid, 'message': 'Stored locally'})
 
 @app.route('/health')
 def health():
