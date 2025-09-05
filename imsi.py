@@ -190,7 +190,7 @@ class AWSOptimizer:
             })
             
             response = bedrock.invoke_model(
-                modelId="amazon.nova-premier-v1:0",
+                modelId="us.amazon.nova-premier-v1:0",
                 body=body,
                 contentType="application/json"
             )

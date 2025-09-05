@@ -50,8 +50,37 @@
         
         .pricing-section { padding: 4rem 2rem; color: white; }
         .pricing-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto; }
-        .pricing-card { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; position: relative; transition: all 0.3s ease; }
+        .pricing-card { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; position: relative; transition: all 0.3s ease; cursor: pointer; }
         .pricing-card:hover { border: 2px solid #4CAF50; transform: scale(1.05); }
+        .pricing-card.selected { border: 3px solid #4CAF50; transform: scale(1.08); box-shadow: 0 0 30px rgba(76, 175, 80, 0.5); }
+        
+        .pricing-card.free { background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(200,200,200,0.2) 100%); }
+        .pricing-card.standard { background: linear-gradient(135deg, rgba(76,175,80,0.2) 0%, rgba(139,195,74,0.3) 100%); }
+        .pricing-card.pro { 
+            background: linear-gradient(135deg, rgba(255,193,7,0.3) 0%, rgba(255,152,0,0.4) 25%, rgba(233,30,99,0.4) 50%, rgba(156,39,176,0.4) 75%, rgba(63,81,181,0.3) 100%);
+            animation: rainbow-glow 3s ease-in-out infinite alternate;
+        }
+        
+        @keyframes rainbow-glow {
+            0% { box-shadow: 0 0 20px rgba(255,193,7,0.5); }
+            25% { box-shadow: 0 0 25px rgba(255,152,0,0.6); }
+            50% { box-shadow: 0 0 30px rgba(233,30,99,0.7); }
+            75% { box-shadow: 0 0 25px rgba(156,39,176,0.6); }
+            100% { box-shadow: 0 0 20px rgba(63,81,181,0.5); }
+        }
+        
+        .plan-demo { position: absolute; top: -10px; right: -10px; background: #FF5722; color: white; padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: bold; display: none; }
+        .pricing-card.selected .plan-demo { display: block; }
+        
+        .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100%; height: 100%; background-color: rgba(0,0,0,0.5); }
+        .modal-content { background: white; margin: 15% auto; padding: 2rem; border-radius: 16px; width: 80%; max-width: 500px; text-align: center; }
+        .modal-content h3 { color: #333; margin-bottom: 1rem; }
+        .modal-content p { color: #666; margin-bottom: 2rem; }
+        .modal-buttons { display: flex; gap: 1rem; justify-content: center; }
+        .modal-btn { padding: 0.8rem 2rem; border: none; border-radius: 8px; font-weight: bold; cursor: pointer; transition: all 0.3s; }
+        .modal-btn.confirm { background: #4CAF50; color: white; }
+        .modal-btn.cancel { background: #f44336; color: white; }
+        .modal-btn:hover { transform: translateY(-2px); }
         .plan-name { font-size: 1.5rem; font-weight: bold; margin-bottom: 1rem; }
         .plan-price { font-size: 2rem; margin-bottom: 1rem; }
         .plan-features { list-style: none; margin: 2rem 0; }
@@ -281,7 +310,8 @@
         <div class="pricing-section">
             <h2 style="text-align: center; color: white; margin-bottom: 3rem;"><i class="fas fa-credit-card"></i> 요금제</h2>
             <div class="pricing-grid">
-                <div class="pricing-card">
+                <div class="pricing-card free" onclick="selectPlan('free', 'Free', '$0')">
+                    <div class="plan-demo">DEMO</div>
                     <div class="plan-name">Free</div>
                     <div class="plan-price">$0<span style="font-size: 1rem;">/월</span></div>
                     <ul class="plan-features">
@@ -293,7 +323,8 @@
                     </ul>
                 </div>
                 
-                <div class="pricing-card">
+                <div class="pricing-card standard" onclick="selectPlan('standard', 'Standard', '$29')">
+                    <div class="plan-demo">DEMO</div>
                     <div class="plan-name">Standard</div>
                     <div class="plan-price">$29<span style="font-size: 1rem;">/월</span></div>
                     <ul class="plan-features">
@@ -305,7 +336,8 @@
                     </ul>
                 </div>
                 
-                <div class="pricing-card">
+                <div class="pricing-card pro" onclick="selectPlan('pro', 'Pro', '$99')">
+                    <div class="plan-demo">DEMO</div>
                     <div class="plan-name">Pro</div>
                     <div class="plan-price">$99<span style="font-size: 1rem;">/월</span></div>
                     <ul class="plan-features">
@@ -356,6 +388,18 @@
             </div>
         </div>
     </div>
+    
+    <!-- 요금제 변경 모달 -->
+    <div id="planModal" class="modal">
+        <div class="modal-content">
+            <h3>요금제 변경</h3>
+            <p id="planModalText"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" onclick="confirmPlanChange()">변경</button>
+                <button class="modal-btn cancel" onclick="closePlanModal()">취소</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 랜덤 팁 배열
@@ -375,6 +419,59 @@
         ];
         
         let tipInterval;
+        let currentPlan = 'free';
+        let selectedPlan = null;
+        
+        // 요금제 선택 함수
+        function selectPlan(planType, planName, planPrice) {
+            selectedPlan = { type: planType, name: planName, price: planPrice };
+            
+            // 모달 텍스트 설정
+            const modalText = document.getElementById('planModalText');
+            modalText.innerHTML = `<strong>${planName}</strong> 요금제(${planPrice}/월)로 변경하시겠습니까?<br><small>이는 데모 버전입니다.</small>`;
+            
+            // 모달 표시
+            document.getElementById('planModal').style.display = 'block';
+        }
+        
+        // 요금제 변경 확인
+        function confirmPlanChange() {
+            if (selectedPlan) {
+                // 기존 선택 제거
+                document.querySelectorAll('.pricing-card').forEach(card => {
+                    card.classList.remove('selected');
+                });
+                
+                // 새 요금제 선택
+                document.querySelector(`.pricing-card.${selectedPlan.type}`).classList.add('selected');
+                
+                // 서비스 탭의 요금제 배지 업데이트
+                const planBadge = document.querySelector('.plan-badge');
+                planBadge.textContent = `${selectedPlan.name} 요금제`;
+                planBadge.style.background = selectedPlan.type === 'free' ? '#4CAF50' : 
+                                           selectedPlan.type === 'standard' ? '#FF9800' : 
+                                           'linear-gradient(45deg, #FF6B6B, #4ECDC4, #45B7D1, #96CEB4, #FFEAA7)';
+                
+                currentPlan = selectedPlan.type;
+                
+                alert(`${selectedPlan.name} 요금제로 변경되었습니다! (데모)`);
+            }
+            closePlanModal();
+        }
+        
+        // 모달 닫기
+        function closePlanModal() {
+            document.getElementById('planModal').style.display = 'none';
+            selectedPlan = null;
+        }
+        
+        // 모달 외부 클릭 시 닫기
+        window.onclick = function(event) {
+            const modal = document.getElementById('planModal');
+            if (event.target === modal) {
+                closePlanModal();
+            }
+        }
         
         // 랜덤 팁 표시 함수
         function showRandomTip() {
@@ -613,6 +710,11 @@
                 showError('폴링 오류');
             }
         }
+        
+        // 페이지 로드 시 Free 요금제 기본 선택
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelector('.pricing-card.free').classList.add('selected');
+        });
     </script>
 </body>
 </html>
