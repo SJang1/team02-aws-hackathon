@@ -105,6 +105,10 @@ class AWSOptimizer:
             bedrock_prompt = f"""
             다음 요구사항을 분석하여 필요한 AWS 서비스를 JSON 형태로 추천해주세요:
             
+            On-Demand 인스턴스 타입을 사용하며, 필수불가결한 경우에만 Reserved 인스턴스를 고려합니다.
+            비용 효율성을 최우선으로 하며, 예산 내에서 최대한의 성능을 제공합니다.
+            가능한 경우 서버리스 아키텍처를 우선적으로 고려합니다.
+
             {prompt}
             예산: ${budget}/월
             리전: {region}
@@ -134,7 +138,7 @@ class AWSOptimizer:
             })
             
             response = bedrock.invoke_model(
-                modelId="amazon.nova-micro-v1:0",
+                modelId="amazon.nova-premier-v1:0",
                 body=body,
                 contentType="application/json"
             )
