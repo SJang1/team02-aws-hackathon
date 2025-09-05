@@ -31,28 +31,59 @@ def get_rds_info():
     try:
         response = rds_client.describe_db_instances()
         for db in response['DBInstances']:
-            if db['DBInstanceStatus'] == 'available':
+            if 'team02-hackathon-db' in db['DBInstanceIdentifier'] and db['DBInstanceStatus'] == 'available':
                 print(f"RDS Status: {db['DBInstanceStatus']}")
                 print(f"RDS Endpoint: {db['Endpoint']['Address']}")
-                return db['Endpoint']['Address'], db['Endpoint']['Port']
-        return None, None
+                return {
+                    'endpoint': db['Endpoint']['Address'],
+                    'port': db['Endpoint']['Port'],
+                    'username': db['MasterUsername'],
+                    'database': db['DBName']
+                }
+        return None
     except Exception as e:
         print(f"Failed to get RDS info: {e}")
-        return None, None
+        return None
+
+def get_rds_password_from_secrets():
+    """Try to get RDS password from AWS Secrets Manager or Parameter Store"""
+    try:
+        # Try AWS Systems Manager Parameter Store first
+        ssm_client = boto3.client('ssm', region_name='us-east-1')
+        response = ssm_client.get_parameter(
+            Name='/team02-hackathon/rds/password',
+            WithDecryption=True
+        )
+        return response['Parameter']['Value']
+    except Exception as e:
+        print(f"Could not get password from Parameter Store: {e}")
+        return None
 
 def get_db_connection():
     import time
     max_retries = 3
     
-    # Get RDS info first
-    endpoint, port = get_rds_info()
-    if endpoint:
-        RDS_CONFIG['host'] = endpoint
-        RDS_CONFIG['port'] = port
+    # Get RDS info from AWS API
+    rds_info = get_rds_info()
+    if rds_info:
+        RDS_CONFIG['host'] = rds_info['endpoint']
+        RDS_CONFIG['port'] = rds_info['port']
+        RDS_CONFIG['user'] = rds_info['username']
+        RDS_CONFIG['database'] = rds_info['database']
+        print(f"Updated RDS config from AWS API: {rds_info['endpoint']}")
+    
+    # Try to get password from environment first, then from AWS
+    if not RDS_CONFIG['password']:
+        password = get_rds_password_from_secrets()
+        if password:
+            RDS_CONFIG['password'] = password
+            print("Retrieved RDS password from AWS Parameter Store")
     
     for attempt in range(max_retries):
         try:
             print(f"Connecting to RDS: {RDS_CONFIG['host']}:{RDS_CONFIG['port']}")
+            print(f"Username: {RDS_CONFIG['user']}, Database: {RDS_CONFIG['database']}")
+            print(f"Password set: {'Yes' if RDS_CONFIG['password'] else 'No'}")
             return pymysql.connect(**RDS_CONFIG)
         except Exception as e:
             print(f"RDS connection attempt {attempt + 1} failed: {e}")
