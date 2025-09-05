@@ -55,6 +55,17 @@ resource "aws_subnet" "private" {
   }
 }
 
+# Additional Private Subnet for RDS (Multi-AZ)
+resource "aws_subnet" "private_db" {
+  vpc_id            = aws_vpc.main.id
+  cidr_block        = "10.0.3.0/24"
+  availability_zone = data.aws_availability_zones.available.names[0]
+
+  tags = {
+    Name = "${var.project_name}-private-db-subnet"
+  }
+}
+
 # Route Table for Public Subnet
 resource "aws_route_table" "public" {
   vpc_id = aws_vpc.main.id
@@ -126,6 +137,23 @@ resource "aws_security_group" "web" {
   }
 }
 
+# Security Group for RDS
+resource "aws_security_group" "rds" {
+  name_prefix = "${var.project_name}-rds-"
+  vpc_id      = aws_vpc.main.id
+
+  ingress {
+    from_port       = 3306
+    to_port         = 3306
+    protocol        = "tcp"
+    security_groups = [aws_security_group.web.id]
+  }
+
+  tags = {
+    Name = "${var.project_name}-rds-sg"
+  }
+}
+
 # IAM Role for EC2
 resource "aws_iam_role" "ec2_role" {
   name = "${var.project_name}-ec2-role"
@@ -182,6 +210,53 @@ resource "aws_iam_policy" "bedrock_pricing_policy" {
 resource "aws_iam_role_policy_attachment" "bedrock_pricing_attach" {
   role       = aws_iam_role.ec2_role.name
   policy_arn = aws_iam_policy.bedrock_pricing_policy.arn
+}
+
+# RDS Subnet Group
+resource "aws_db_subnet_group" "main" {
+  name       = "${var.project_name}-db-subnet-group"
+  subnet_ids = [aws_subnet.private.id, aws_subnet.private_db.id]
+
+  tags = {
+    Name = "${var.project_name}-db-subnet-group"
+  }
+}
+
+# RDS Instance
+resource "aws_db_instance" "main" {
+  identifier     = "${var.project_name}-db"
+  engine         = "mysql"
+  engine_version = "8.0"
+  instance_class = "db.t3.micro"
+  
+  allocated_storage     = 20
+  max_allocated_storage = 100
+  storage_type          = "gp2"
+  storage_encrypted     = true
+  
+  db_name  = "clops"
+  username = "admin"
+  password = random_password.db_password.result
+  
+  vpc_security_group_ids = [aws_security_group.rds.id]
+  db_subnet_group_name   = aws_db_subnet_group.main.name
+  
+  backup_retention_period = 7
+  backup_window          = "03:00-04:00"
+  maintenance_window     = "sun:04:00-sun:05:00"
+  
+  skip_final_snapshot = true
+  deletion_protection = false
+  
+  tags = {
+    Name = "${var.project_name}-database"
+  }
+}
+
+# Random password for RDS
+resource "random_password" "db_password" {
+  length  = 16
+  special = true
 }
 
 # Instance Profile
@@ -300,26 +375,62 @@ NGINX_EOF
               git clone ${var.git_repo_url} repo || \
               echo "Repository clone failed, creating placeholder files"
               
+              # Set RDS environment variables
+              export RDS_ENDPOINT="${aws_db_instance.main.endpoint}"
+              export RDS_USERNAME="${aws_db_instance.main.username}"
+              export RDS_PASSWORD="${random_password.db_password.result}"
+              export RDS_DATABASE="${aws_db_instance.main.db_name}"
+              export RDS_PORT="${aws_db_instance.main.port}"
+              
+              # Add environment variables to .bashrc
+              echo "export RDS_ENDPOINT=${aws_db_instance.main.endpoint}" >> /home/ec2-user/.bashrc
+              echo "export RDS_USERNAME=${aws_db_instance.main.username}" >> /home/ec2-user/.bashrc
+              echo "export RDS_PASSWORD=${random_password.db_password.result}" >> /home/ec2-user/.bashrc
+              echo "export RDS_DATABASE=${aws_db_instance.main.db_name}" >> /home/ec2-user/.bashrc
+              echo "export RDS_PORT=${aws_db_instance.main.port}" >> /home/ec2-user/.bashrc
+              
+              # Install Python and dependencies
+              yum install -y python3 python3-pip
+              
               # If clone succeeded, copy files to home directory
               if [ -d "repo" ]; then
                 cp -r repo/* .
                 chmod +x start_servers.sh
-                bash start_servers.sh
+                
+                # Install dependencies
+                pip3 install -r requirements.txt
+                
+                # Start RDS-enabled application
+                nohup python3 imsi_new.py > app.log 2>&1 &
+                
+                # Start frontend if exists
+                if [ -f "front/app.py" ]; then
+                  cd front
+                  pip3 install -r requirements.txt
+                  nohup python3 app.py > frontend.log 2>&1 &
+                  cd ..
+                fi
               else
                 # Fallback: create simple test server
-                yum install -y python3 python3-pip
-                pip3 install flask
+                pip3 install flask pymysql cryptography boto3
                 cat > test_app.py << 'PYTHON_EOF'
 from flask import Flask
 app = Flask(__name__)
 @app.route('/')
 def hello():
-    return '<h1>Repository not found</h1><p>Please check the git repository URL</p>'
+    return '<h1>ClOps RDS Ready</h1><p>RDS integration configured</p>'
+@app.route('/health')
+def health():
+    return {'status': 'healthy', 'database': 'RDS MySQL'}
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=8080)
+    app.run(host='0.0.0.0', port=5000)
 PYTHON_EOF
                 nohup python3 test_app.py > app.log 2>&1 &
               fi
+              
+              # Wait for RDS to be ready
+              echo "Waiting for RDS to be ready..."
+              sleep 30
               EOF
 
   tags = {
