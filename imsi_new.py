@@ -201,15 +201,18 @@ class AWSOptimizer:
             'Amazon SageMaker': 'SageMaker',
             'AWS Lambda': 'Lambda', 
             'Amazon S3': 'S3',
-            'Amazon EMR': 'EC2',  # EMR은 EC2 기반
-            'Amazon Kinesis': 'Lambda',  # Kinesis는 Lambda로 대체
-            'AWS Glue': 'Lambda',  # Glue는 Lambda로 대체
-            'Amazon Athena': 'S3',  # Athena는 S3 기반
-            'Amazon CloudWatch': 'CloudFront',  # CloudWatch는 CloudFront로 대체
-            'AWS Auto Scaling': 'EC2',  # Auto Scaling은 EC2 기반
-            'Amazon Elastic Kubernetes Service (EKS)': 'EC2',  # EKS는 EC2 기반
-            'AWS Step Functions': 'Lambda',  # Step Functions는 Lambda 기반
-            'Amazon API Gateway': 'Lambda'  # API Gateway는 Lambda 기반
+            'Amazon EMR': 'EC2',
+            'Amazon Kinesis': 'Lambda',
+            'AWS Glue': 'Lambda',
+            'Amazon Athena': 'S3',
+            'Amazon CloudWatch': 'CloudFront',
+            'AWS Auto Scaling': 'EC2',
+            'Amazon Elastic Kubernetes Service (EKS)': 'EC2',
+            'AWS Step Functions': 'Lambda',
+            'Amazon API Gateway': 'Lambda',
+            'Amazon Elasticsearch Service': 'OpenSearch',
+            'AWS IAM': 'Lambda',  # IAM은 Lambda로 대체
+            'Amazon VPC': 'EC2'  # VPC는 EC2 기반
         }
         
         priced_services = []
