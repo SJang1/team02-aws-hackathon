@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>CloudOptimizer - AWS 서비스 추천 플랫폼</title>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
+        
+        .navbar { background: rgba(255,255,255,0.95); backdrop-filter: blur(10px); padding: 1rem 0; box-shadow: 0 2px 20px rgba(0,0,0,0.1); }
+        .nav-container { max-width: 1200px; margin: 0 auto; display: flex; justify-content: space-between; align-items: center; padding: 0 2rem; }
+        .logo { font-size: 1.5rem; font-weight: bold; color: #333; }
+        .nav-links { display: flex; list-style: none; gap: 2rem; }
+        .nav-links a { text-decoration: none; color: #333; font-weight: 500; transition: color 0.3s; }
+        .nav-links a:hover { color: #667eea; }
+        
+        .hero { text-align: center; padding: 4rem 2rem; color: white; }
+        .hero h1 { font-size: 3rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
+        .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+        
+        .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
+        .card { background: white; border-radius: 20px; padding: 3rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1); margin-top: -2rem; position: relative; z-index: 1; }
+        
+        .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
+        .form-group { margin-bottom: 1.5rem; }
+        .form-group.full-width { grid-column: 1 / -1; }
+        
+        label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem; }
+        select, input, textarea { width: 100%; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 1rem; transition: all 0.3s; background: #f8f9fa; }
+        select:focus, input:focus, textarea:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
+        
+        .custom-input { display: none; margin-top: 0.5rem; }
+        .custom-input.show { display: block; }
+        
+        .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.3s, box-shadow 0.3s; }
+        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+        
+        #result { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; color: white; display: none; }
+        
+        .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin: 4rem 0; }
+        .feature { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; color: white; }
+        .feature i { font-size: 3rem; margin-bottom: 1rem; }
+        
+        @media (max-width: 768px) {
+            .form-grid { grid-template-columns: 1fr; }
+            .hero h1 { font-size: 2rem; }
+            .nav-links { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar">
+        <div class="nav-container">
+            <div class="logo"><i class="fas fa-cloud"></i> CloudOptimizer</div>
+            <ul class="nav-links">
+                <li><a href="#home">홈</a></li>
+                <li><a href="#services">서비스</a></li>
+                <li><a href="#pricing">요금</a></li>
+                <li><a href="#contact">문의</a></li>
+            </ul>
+        </div>
+    </nav>
+    
+    <section class="hero">
+        <h1><i class="fas fa-magic"></i> AWS 서비스 추천 플랫폼</h1>
+        <p>AI 기반으로 당신의 프로젝트에 최적화된 AWS 서비스 구성과 비용을 추천해드립니다</p>
+    </section>
+    
+    <div class="features">
+        <div class="feature">
+            <i class="fas fa-robot"></i>
+            <h3>AI 기반 분석</h3>
+            <p>머신러닝으로 최적의 서비스 조합을 찾아드립니다</p>
+        </div>
+        <div class="feature">
+            <i class="fas fa-dollar-sign"></i>
+            <h3>비용 최적화</h3>
+            <p>예산에 맞는 가장 효율적인 구성을 제안합니다</p>
+        </div>
+        <div class="feature">
+            <i class="fas fa-chart-line"></i>
+            <h3>성능 보장</h3>
+            <p>요구사항에 맞는 성능을 보장하는 서비스를 추천합니다</p>
+        </div>
+    </div>
+    
+    <div class="container">
+        <div class="card">
+    
+    <form id="estimateForm">
+        <div class="form-group">
+            <label for="serviceType">서비스 유형:</label>
+            <select id="serviceType" required>
+                <option value="">선택하세요</option>
+                <option value="웹사이트">웹사이트/웹앱</option>
+                <option value="API">API 서버</option>
+                <option value="데이터베이스">데이터베이스</option>
+                <option value="머신러닝">머신러닝/AI</option>
+                <option value="스토리지">파일 저장소</option>
+                <option value="분석">데이터 분석</option>
+                <option value="기타">기타</option>
+            </select>
+            <input type="text" id="customServiceType" class="custom-input" placeholder="서비스 유형을 직접 입력하세요">
+            </select>
+        </div>
+        
+            <div class="form-group">
+                <label for="expectedUsers">예상 사용자 수:</label>
+                <select id="expectedUsers" required>
+                    <option value="">선택하세요</option>
+                    <option value="소규모">소규모 (1-100명)</option>
+                    <option value="중간규모">중간규모 (100-1,000명)</option>
+                    <option value="대규모">대규모 (1,000-10,000명)</option>
+                    <option value="엔터프라이즈">엔터프라이즈 (10,000명+)</option>
+                    <option value="기타">기타</option>
+                </select>
+                <input type="text" id="customExpectedUsers" class="custom-input" placeholder="사용자 수를 직접 입력하세요">
+            </div>
+        
+            <div class="form-group">
+                <label for="performance">성능 요구사항:</label>
+                <select id="performance" required>
+                    <option value="">선택하세요</option>
+                    <option value="기본">기본 성능</option>
+                    <option value="중간">중간 성능</option>
+                    <option value="고성능">고성능</option>
+                    <option value="최고성능">최고 성능</option>
+                    <option value="기타">기타</option>
+                </select>
+                <input type="text" id="customPerformance" class="custom-input" placeholder="성능 요구사항을 직접 입력하세요">
+            </div>
+        
+            <div class="form-group">
+                <label for="region">AWS 리전:</label>
+                <select id="region" required>
+                    <option value="">선택하세요</option>
+                    <option value="ap-northeast-2">서울 (ap-northeast-2)</option>
+                    <option value="us-east-1">버지니아 북부 (us-east-1)</option>
+                    <option value="us-west-2">오레곤 (us-west-2)</option>
+                    <option value="ap-southeast-1">싱가포르 (ap-southeast-1)</option>
+                    <option value="기타">기타</option>
+                </select>
+                <input type="text" id="customRegion" class="custom-input" placeholder="리전을 직접 입력하세요">
+            </div>
+        
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="additionalInfo">추가 요구사항:</label>
+                <textarea id="additionalInfo" rows="3" placeholder="특별한 요구사항이나 기능을 입력하세요 (선택사항)"></textarea>
+            </div>
+            
+            <div class="form-group full-width">
+                <label for="budget"><i class="fas fa-dollar-sign"></i> 월 예산 (USD):</label>
+                <input type="number" id="budget" min="1" placeholder="100" required>
+            </div>
+            
+            <button type="submit" class="submit-btn">
+                <i class="fas fa-magic"></i> AWS 서비스 추천 받기
+            </button>
+        </div>
+    </form>
+    
+        <div id="result">
+            <h3><i class="fas fa-cog fa-spin"></i> AI가 분석 중입니다...</h3>
+            <p id="status">최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
+        </div>
+        </div>
+    </div>
+
+    <script>
+        // 기타 옵션 선택 시 커스텀 입력 필드 보이기/숨기기
+        function toggleCustomInput(selectId, customInputId) {
+            const select = document.getElementById(selectId);
+            const customInput = document.getElementById(customInputId);
+            
+            select.addEventListener('change', function() {
+                if (this.value === '기타') {
+                    customInput.classList.add('show');
+                    customInput.required = true;
+                } else {
+                    customInput.classList.remove('show');
+                    customInput.required = false;
+                    customInput.value = '';
+                }
+            });
+        }
+        
+        // 각 선택 상자에 대해 커스텀 입력 기능 활성화
+        toggleCustomInput('serviceType', 'customServiceType');
+        toggleCustomInput('expectedUsers', 'customExpectedUsers');
+        toggleCustomInput('performance', 'customPerformance');
+        toggleCustomInput('region', 'customRegion');
+        
+        document.getElementById('estimateForm').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 값 가져오기 (기타 선택 시 커스텀 입력값 사용)
+            const serviceType = document.getElementById('serviceType').value === '기타' ? 
+                document.getElementById('customServiceType').value : document.getElementById('serviceType').value;
+            const expectedUsers = document.getElementById('expectedUsers').value === '기타' ? 
+                document.getElementById('customExpectedUsers').value : document.getElementById('expectedUsers').value;
+            const performance = document.getElementById('performance').value === '기타' ? 
+                document.getElementById('customPerformance').value : document.getElementById('performance').value;
+            const region = document.getElementById('region').value === '기타' ? 
+                document.getElementById('customRegion').value : document.getElementById('region').value;
+            const additionalInfo = document.getElementById('additionalInfo').value;
+            const budget = document.getElementById('budget').value;
+            
+            // AI 프롬프트 형식으로 구성
+            const prompt = `AWS 서비스 추천 요청:
+- 서비스 유형: ${serviceType}
+- 예상 사용자 수: ${expectedUsers}
+- 성능 요구사항: ${performance}
+- AWS 리전: ${region}
+- 월 예산: $${budget}
+- 추가 요구사항: ${additionalInfo || '없음'}
+
+위 조건에 맞는 AWS 서비스 구성과 예상 비용을 제안해주세요.`;
+            
+            document.getElementById('result').style.display = 'block';
+            
+            try {
+                const response = await fetch('/estimate', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ prompt: prompt, budget: budget })
+                });
+                
+                const data = await response.json();
+                const uuid = data.uuid;
+                
+                // 폴링 시작
+                pollResult(uuid);
+            } catch (error) {
+                document.getElementById('status').textContent = '오류가 발생했습니다.';
+            }
+        });
+        
+        async function pollResult(uuid) {
+            try {
+                const response = await fetch(`/poll/${uuid}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed') {
+                    document.getElementById('status').innerHTML = `<strong><i class="fas fa-check-circle"></i> 분석 완료!</strong><br><pre>${JSON.stringify(data.result, null, 2)}</pre>`;
+                } else if (data.status === 'failed') {
+                    document.getElementById('status').innerHTML = '<i class="fas fa-exclamation-triangle"></i> 처리 실패';
+                } else {
+                    setTimeout(() => pollResult(uuid), 2000);
+                }
+            } catch (error) {
+                document.getElementById('status').textContent = '폴링 오류';
+            }
+        }
+    </script>
+</body>
+</html>
