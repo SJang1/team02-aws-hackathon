@@ -1,0 +1,5 @@
+aws_region    = "us-east-1"
+project_name  = "team02-hackathon"
+instance_type = "t3.2xlarge"
+key_name      = "team02-hackathon-keypair"
+environment   = "dev"
