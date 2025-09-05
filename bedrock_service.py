@@ -39,7 +39,7 @@ class BedrockService:
                 })
                 
                 response = self.client.invoke_model(
-                    modelId="amazon.nova-micro-v1:0",
+                    modelId="amazon.nova-premier-v1:0",
                     body=body,
                     contentType="application/json"
                 )

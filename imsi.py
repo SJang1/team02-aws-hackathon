@@ -505,6 +505,29 @@ def get_status(request_uuid):
     
     return jsonify(result)
 
+@app.route('/contact', methods=['POST'])
+def submit_contact():
+    data = request.json
+    contact_uuid = str(uuid.uuid4())
+    
+    # 문의 데이터 저장
+    contact_data = {
+        'uuid': contact_uuid,
+        'name': data.get('name'),
+        'email': data.get('email'),
+        'subject': data.get('subject'),
+        'message': data.get('message'),
+        'timestamp': data.get('timestamp'),
+        'status': 'received'
+    }
+    
+    # 메모리에 저장 (실제로는 데이터베이스 사용)
+    requests_store[f'contact_{contact_uuid}'] = contact_data
+    
+    print(f"New contact received: {contact_data['name']} - {contact_data['subject']}")
+    
+    return jsonify({'status': 'success', 'uuid': contact_uuid})
+
 @app.route('/health')
 def health():
     return jsonify({'status': 'healthy', 'timestamp': datetime.utcnow().isoformat()})
