@@ -114,7 +114,7 @@ class AWSOptimizer:
             - 예산: ${budget}/월
             - 리전: {region}
             
-            On-Demand 인스턴스 타입을 사용하며, 비용 효율성을 최우선으로 합니다.
+            On-Demand 인스턴스 타입을 사용하며, 최대한 예산 범위 내에서 "최대한 크게 넉넉히" 추천합니다.
             
             응답 형식 (JSON만):
             {{
