@@ -229,6 +229,8 @@ class AWSOptimizer:
                         if price_per_unit and float(price_per_unit) > 0:
                             hourly_price = float(price_per_unit)
                             return hourly_price * 24 * 30
+                        else:
+                            return 0.1
         
         return None
     
@@ -462,7 +464,7 @@ class AWSOptimizer:
             3. 서버/데이터베이스 장애
             4. 네트워크 장애
 
-            필요에 따라서 EC2 인스턴스를 2대 이상 운영하는 등 이중화 구성을 고려하세요. 다만 이 경우 Load Balancer도 함께 고려해야 합니다.
+            특히 중요한 서비스 등의 경우, 필요에 따라서 EC2 인스턴스를 2대 이상 운영하는 등 이중화 구성을 고려하세요. 다만 이 경우 Load Balancer 제품도 함께 고려해야 합니다.
             
             우선순위:
             1. 가용성 > 성능 > 비용
