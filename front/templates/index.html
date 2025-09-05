@@ -209,18 +209,18 @@
             const additionalInfo = document.getElementById('additionalInfo').value;
             const budget = document.getElementById('budget').value;
             
-            // imsi.py 백엔드 형식에 맞게 프롬프트 구성
-            const prompt = `서비스 유형: ${serviceType}, 예상 사용자: ${expectedUsers}, 성능: ${performance}, 추가 요구사항: ${additionalInfo || '없음'}`;
-            
             document.getElementById('result').style.display = 'block';
             
             try {
-                const response = await fetch('/estimate', {
+                const response = await fetch('/optimize', {
                     method: 'POST',
                     headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify({ 
-                        prompt: prompt, 
-                        budget: budget,
+                        service_type: serviceType,
+                        users: expectedUsers,
+                        performance: performance,
+                        additional_info: additionalInfo || '',
+                        budget: parseInt(budget),
                         region: region 
                     })
                 });
@@ -237,7 +237,7 @@
         
         async function pollResult(uuid) {
             try {
-                const response = await fetch(`/poll/${uuid}`);
+                const response = await fetch(`/status/${uuid}`);
                 const data = await response.json();
                 
                 if (data.status === 'completed') {

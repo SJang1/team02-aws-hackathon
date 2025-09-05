@@ -100,18 +100,18 @@ class AWSOptimizer:
         
         return self.fallback_costs['RDS'].get(instance_type, 50)
     
-    def analyze_requirements(self, prompt, budget, region='us-east-1'):
+    def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
         try:
             bedrock_prompt = f"""
-            다음 요구사항을 분석하여 필요한 AWS 서비스를 JSON 형태로 추천해주세요:
+            AWS 서비스 추천 요청:
+            - 서비스 유형: {service_type}
+            - 예상 사용자 수: {users}
+            - 성능 요구사항: {performance}
+            - 추가 요구사항: {additional_info}
+            - 예산: ${budget}/월
+            - 리전: {region}
             
-            On-Demand 인스턴스 타입을 사용하며, 필수불가결한 경우에만 Reserved 인스턴스를 고려합니다.
-            비용 효율성을 최우선으로 하며, 예산 내에서 최대한의 성능을 제공합니다.
-            가능한 경우 서버리스 아키텍처를 우선적으로 고려합니다.
-
-            {prompt}
-            예산: ${budget}/월
-            리전: {region}
+            On-Demand 인스턴스 타입을 사용하며, 비용 효율성을 최우선으로 합니다.
             
             응답 형식 (JSON만):
             {{
@@ -155,10 +155,74 @@ class AWSOptimizer:
             print(f"Bedrock failed: {e}")
         
         # 폴백 분석
+        return self._fallback_analysis(service_type, users, performance, additional_info)
+    
+    def _fallback_analysis(self, service_type, users, performance, additional_info):
         services = []
-        if any(word in prompt.lower() for word in ['웹', 'web', 'api']):
-            services.append({"name": "EC2", "type": "t2.micro", "quantity": 1, "reason": "웹서버"})
-            services.append({"name": "RDS", "type": "db.t3.micro", "quantity": 1, "reason": "데이터베이스"})
+        
+        # 사용자 규모 정규화
+        if users in ['소규모', '1-100명', '100명 이하']:
+            user_scale = 'small'
+        elif users in ['중간규모', '100-1,000명', '1000명 이하']:
+            user_scale = 'medium'
+        elif users in ['대규모', '1,000-10,000명', '10000명 이하']:
+            user_scale = 'large'
+        elif users in ['엔터프라이즈', '10,000명+', '10000명 이상']:
+            user_scale = 'enterprise'
+        else:
+            # 기타 옵션으로 직접 입력한 경우
+            if any(word in users.lower() for word in ['100', '소규모', 'small']):
+                user_scale = 'small'
+            elif any(word in users.lower() for word in ['1000', '중간', 'medium']):
+                user_scale = 'medium'
+            elif any(word in users.lower() for word in ['10000', '대규모', 'large']):
+                user_scale = 'large'
+            else:
+                user_scale = 'medium'  # 기본값
+        
+        # 서비스 유형 처리 (기타 옵션 포함)
+        if service_type in ['웹사이트', 'API'] or any(word in service_type.lower() for word in ['web', 'api', '웹', '사이트']):
+            if user_scale == 'small':
+                ec2_type = 't2.micro'
+            elif user_scale == 'medium':
+                ec2_type = 't2.small'
+            elif user_scale == 'large':
+                ec2_type = 't2.medium'
+            else:
+                ec2_type = 't3.medium'
+            
+            if performance in ['고성능', '최고성능'] and ec2_type == 't2.micro':
+                ec2_type = 't2.small'
+            
+            services.append({"name": "EC2", "type": ec2_type, "quantity": 1, "reason": "웹서버/API서버"})
+            
+            if '데이터베이스' in additional_info or service_type == '웹사이트':
+                rds_type = 'db.t3.micro' if user_scale == 'small' else 'db.t3.small'
+                services.append({"name": "RDS", "type": rds_type, "quantity": 1, "reason": "데이터베이스"})
+        
+        elif service_type == '데이터베이스' or 'database' in service_type.lower() or 'db' in service_type.lower():
+            if user_scale == 'small':
+                rds_type = 'db.t3.micro'
+            elif user_scale == 'medium':
+                rds_type = 'db.t3.small'
+            else:
+                rds_type = 'db.t3.medium'
+            services.append({"name": "RDS", "type": rds_type, "quantity": 1, "reason": "메인 데이터베이스"})
+        
+        elif service_type == '머신러닝' or any(word in service_type.lower() for word in ['ml', 'ai', 'machine', 'learning']):
+            services.append({"name": "EC2", "type": 't3.medium', "quantity": 1, "reason": "ML 워크로드"})
+            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "데이터 저장소"})
+        
+        elif service_type == '스토리지' or any(word in service_type.lower() for word in ['storage', 'file', '파일', '저장']):
+            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "파일 저장소"})
+        
+        elif service_type == '분석' or any(word in service_type.lower() for word in ['analytics', 'analysis', '분석']):
+            services.append({"name": "EC2", "type": 't3.medium', "quantity": 1, "reason": "데이터 분석 서버"})
+            services.append({"name": "S3", "type": "standard", "quantity": 1, "reason": "데이터 레이크"})
+        
+        else:
+            # 기타 서비스 유형에 대한 기본 처리
+            services.append({"name": "EC2", "type": 't2.small', "quantity": 1, "reason": f"{service_type} 서버"})
         
         return services
     
@@ -213,21 +277,22 @@ def store_request(request_uuid, data):
 def get_request(request_uuid):
     return requests_store.get(request_uuid)
 
-def process_optimization(request_uuid, prompt, budget, region):
+def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
-        # 상태 업데이트: 분석 중
         store_request(request_uuid, {
             'uuid': request_uuid,
             'status': 'analyzing',
-            'prompt': prompt,
+            'service_type': service_type,
+            'users': users,
+            'performance': performance,
+            'additional_info': additional_info,
             'budget': budget,
             'region': region,
             'created_at': datetime.utcnow(),
             'updated_at': datetime.utcnow()
         })
         
-        # 1. 요구사항 분석
-        services = optimizer.analyze_requirements(prompt, budget, region)
+        services = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region)
         
         store_request(request_uuid, {
             'status': 'optimizing',
@@ -274,14 +339,17 @@ def process_optimization(request_uuid, prompt, budget, region):
 @app.route('/optimize', methods=['POST'])
 def create_optimization():
     data = request.json
-    prompt = data.get('prompt')
+    
+    service_type = data.get('service_type', '')
+    users = data.get('users', '소규모')
+    performance = data.get('performance', '기본')
+    additional_info = data.get('additional_info', '')
     budget = float(data.get('budget', 100))
     region = data.get('region', 'us-east-1')
     
     request_uuid = str(uuid.uuid4())
     
-    # 비동기 처리 시작
-    thread = Thread(target=process_optimization, args=(request_uuid, prompt, budget, region))
+    thread = Thread(target=process_optimization, args=(request_uuid, service_type, users, performance, additional_info, budget, region))
     thread.start()
     
     return jsonify({'uuid': request_uuid, 'status': 'processing'})

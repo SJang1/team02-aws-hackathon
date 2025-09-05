@@ -8,8 +8,8 @@ BACKEND_URL = 'http://localhost:5000'  # imsi.py 서버 주소
 def index():
     return render_template('index.html')
 
-@app.route('/estimate', methods=['POST'])
-def estimate():
+@app.route('/optimize', methods=['POST'])
+def optimize():
     data = request.json
     
     # imsi.py 백엔드로 요청 전달
@@ -21,8 +21,8 @@ def estimate():
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 
-@app.route('/poll/<request_uuid>')
-def poll_result(request_uuid):
+@app.route('/status/<request_uuid>')
+def get_status(request_uuid):
     # imsi.py 백엔드에서 결과 조회
     try:
         response = requests.get(f'{BACKEND_URL}/status/{request_uuid}', 
