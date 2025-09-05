@@ -38,7 +38,7 @@
 - ClOps의 월 구독료는 단 한 시간의 서비스 중단으로 발생하는 수만 달러의 손실(https://www.connectwise.com/resources/bcdr-guide/ch1-impacts-of-business-downtime),
 - IaC 학습에 필요한 수백 시간의 개발자 인건비,
 - 혹은 PaaS의 높은 확장 비용(https://blog.boltops.com/2025/05/01/heroku-vs-render-vs-vercel-vs-fly-io-vs-railway-meet-blossom-an-alternative/)에 비하면 극히 일부에 불과합니다. 
-- ClOps는 단순한 비용이 아니라, 미래의 성공과 수익 흐름 전체를 보호하는 가장 확실하고 합리적인 투자, 즉 **'성공 보험(Success Insurance)'**입니다.
+- ClOps는 단순한 비용이 아니라, 미래의 성공과 수익 흐름 전체를 보호하는 가장 확실하고 합리적인 투자, 즉 '실패 방지 보험'입니다.
 
 ### 시장 기회: 폭발적으로 성장하는 인디 씬
 - 한국콘텐츠진흥원(KOCCA)의 「글로벌 게임산업 트렌드」 보고서에 따르면, 최근 게임 시장은 대형 AAA급 타이틀뿐만 아니라 독창성과 게임성을 갖춘 인디 게임들의 약진이 두드러지고 있습니다.
@@ -50,7 +50,7 @@
 
 #### ClOps의 확실한 가능성
 
-- ClOps를 사용하는 것은 다른 대안들과 비교했을 때 압도적인 비용 효율성을 가집니다. 일반적인 스타트업 고객을 기준으로 연간 예상 ROI는 **477%**에 달합니다.
+- ClOps를 사용하는 것은 다른 대안들과 비교했을 때 압도적인 비용 효율성을 가집니다.
 
 - 대안별 비용
 
