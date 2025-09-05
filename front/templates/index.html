@@ -831,17 +831,17 @@
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
-                    if (data.feasible) {
+                    if (data.response_data.feasible) {
                         let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
-                        content += generateArchitectureDiagram(data.services);
+                        content += generateArchitectureDiagram(data.response_data.services);
                         content += `<div class="cost-summary">`;
                         content += `<h4>비용 요약</h4>`;
-                        content += `<p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
-                        content += `<p>예산 내 절약: $${data.savings}</p>`;
+                        content += `<p><strong>총 비용: $${data.response_data.total_cost}/월</strong></p>`;
+                        content += `<p>예산 내 절약: $${data.response_data.savings}</p>`;
                         content += `</div>`;
                         showResult(content, true);
                     } else {
-                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>${data.message}</p>`, false);
+                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>예산을 초과했습니다.</p>`, false);
                     }
                 } else if (data.status === 'failed') {
                     showError('처리 실패');
