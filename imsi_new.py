@@ -108,6 +108,7 @@ class AWSOptimizer:
             
             예산은 고려하지 말고, 이상적인 아키텍처를 위해 필요한 AWS 서비스들을 나열해주세요.
             인스턴스 타입은 지정하지 말고 서비스 이름만 나열해주세요.
+            오토스케일링 등도 전부 고려 해 주세요.
             
             예시 응답:
             {{
@@ -135,6 +136,8 @@ class AWSOptimizer:
                 body=body,
                 contentType="application/json"
             )
+
+            print(response['body'].read().decode('utf-8'))
             
             result = json.loads(response['body'].read())
             content = result['output']['message']['content'][0]['text']
@@ -271,6 +274,8 @@ class AWSOptimizer:
                 body=body,
                 contentType="application/json"
             )
+
+            print(response['body'].read().decode('utf-8'))
             
             result = json.loads(response['body'].read())
             content = result['output']['message']['content'][0]['text']
