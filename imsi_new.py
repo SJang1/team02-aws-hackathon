@@ -227,7 +227,7 @@ class AWSOptimizer:
             services_info = []
             for service in priced_services:
                 service_options = []
-                for option in service['options'][:10]:  # 상위 10개 옵션만
+                for option in service['options']:
                     service_options.append(f"{option['type']}: ${option['monthly_cost']}/월")
                 
                 services_info.append({
