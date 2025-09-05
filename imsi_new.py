@@ -262,9 +262,9 @@ class AWSOptimizer:
             # 목적
             - 당신은 서버 설계를 위해서, Traffic 입장에서 어떤 일이 있을때 어떤 특성으로 트래픽이 나올지 예측하는 모델입니다.
             # 입력
-            - 유저로부터 어떤 서비스를 만들고자 하는지에 대해 입력받게 됩니다. 
+            - 유저로부터 어떤 서비스를 만들고자 하는지에 대해 입력받게 됩니다.
             # 출력
-            - 당신은 제공받은 입력의 서비스가 어떤 이벤트가 발생하면 어떤 특성을 가지는 Traffic이 얼마나 생길지 예측하여 그 최고로 많은 량의 트래픽 시나리오를 작성하면 됩니다. 
+            - 당신은 제공받은 입력의 서비스가 어떤 이벤트가 발생하면 어떤 특성을 가지는 Traffic이 얼마나 생길지 예측하여 그 최고로 많은 량의 트래픽 시나리오를 작성하면 됩니다.
             - 당신은 유저에게 추가정보를 받을 수 없습니다. 따라서, 당신은 무조건, **한번의 질문에서 모든 상황과 목적을 추론하여 생성해야 합니다.**
             - Traffic의 최대 폭발량은 1000배 혹은 10000 request per day중 가장 높은 값을 선택하면 됩니다.
             - 당신은 최악의 단계의 서버에 필요한 특성과 필요한 리소스들을 제시하면 됩니다. 이때, 트래픽의 특성을 제시하세요.
@@ -524,7 +524,12 @@ class AWSOptimizer:
                 json_str = content[start:end]
             
             optimization = json.loads(json_str)
-            return optimization['disaster_ready_services'], optimization['total_cost']
+            
+            # Step 4: 정확한 가격 계산 및 검증
+            selected_services = self.step4_calculate_exact_costs(optimization['disaster_ready_services'], priced_services)
+            total_cost = sum(service['total_monthly_cost'] for service in selected_services)
+            
+            return selected_services, total_cost
                 
         except Exception as e:
             print(f"Step 3 disaster-ready optimization failed: {e}")
@@ -532,10 +537,70 @@ class AWSOptimizer:
         # AI 실패 시 기본 재해대비 최적화
         return self._fallback_disaster_optimization(priced_services, budget)
     
+    def step4_calculate_exact_costs(self, selected_services, priced_services):
+        """4단계: 선택된 서비스들의 정확한 비용 계산"""
+        calculated_services = []
+        
+        print("\n=== Step 4: Calculating Exact Costs ===")
+        
+        for selected in selected_services:
+            service_name = selected['name']
+            selected_type = selected['type']
+            quantity = selected.get('quantity', 1)
+            
+            # priced_services에서 해당 서비스 찾기
+            found_service = None
+            for priced_service in priced_services:
+                if priced_service['name'] == service_name:
+                    found_service = priced_service
+                    break
+            
+            if found_service:
+                # 선택된 타입의 가격 찾기
+                unit_cost = None
+                for option in found_service['options']:
+                    if option['type'] == selected_type:
+                        unit_cost = option['monthly_cost']
+                        break
+                
+                if unit_cost is None:
+                    # 선택된 타입이 없으면 가장 가까운 가격 사용
+                    unit_cost = found_service['options'][0]['monthly_cost'] if found_service['options'] else 50
+                    print(f"  Warning: {selected_type} not found for {service_name}, using fallback: ${unit_cost}")
+            else:
+                # 서비스를 찾을 수 없으면 폴백 가격 사용
+                unit_cost = self.fallback_costs.get(service_name, {}).get(selected_type, 50)
+                print(f"  Warning: Service {service_name} not found, using fallback: ${unit_cost}")
+            
+            # 총 비용 계산 (단가 × 수량)
+            total_cost = unit_cost * quantity
+            
+            calculated_service = {
+                'name': service_name,
+                'type': selected_type,
+                'unit_monthly_cost': unit_cost,
+                'quantity': quantity,
+                'total_monthly_cost': total_cost,
+                'reason': selected.get('reason', ''),
+                'disaster_benefit': selected.get('disaster_benefit', '')
+            }
+            
+            calculated_services.append(calculated_service)
+            
+            print(f"  {service_name} ({selected_type}): ${unit_cost}/월 × {quantity}대 = ${total_cost}/월")
+        
+        total_monthly_cost = sum(service['total_monthly_cost'] for service in calculated_services)
+        print(f"\n  Total Monthly Cost: ${total_monthly_cost:.2f}")
+        print("=== Step 4 Complete ===\n")
+        
+        return calculated_services
+    
     def _fallback_disaster_optimization(self, priced_services, budget):
         """기본 재해대비 최적화 로직"""
         optimized = []
         total_cost = 0
+        
+        print("\n=== Using Fallback Disaster Optimization ===")
         
         # 재해대비 우선순위: CDN > 로드밸런서 > Auto Scaling > 모니터링
         priority_services = ['AmazonCloudFront', 'ElasticLoadBalancingV2', 'AmazonEC2', 'AmazonCloudWatch']
@@ -546,19 +611,22 @@ class AWSOptimizer:
                 if service['name'] == priority_service and service['options']:
                     # 중간 성능 옵션 선택 (재해대비를 위해)
                     mid_option = service['options'][len(service['options'])//2] if len(service['options']) > 1 else service['options'][0]
-                    if total_cost + mid_option['monthly_cost'] <= budget:
-                        quantity = 2 if priority_service == 'AmazonEC2' else 1  # EC2는 이중화
-                        cost = mid_option['monthly_cost'] * quantity
-                        if total_cost + cost <= budget:
-                            optimized.append({
-                                'name': service['name'],
-                                'type': mid_option['type'],
-                                'monthly_cost': cost,
-                                'reason': f"{mid_option['reason']} (재해대비)",
-                                'quantity': quantity,
-                                'disaster_benefit': '재해상황 대응 강화'
-                            })
-                            total_cost += cost
+                    quantity = 2 if priority_service == 'AmazonEC2' else 1  # EC2는 이중화
+                    unit_cost = mid_option['monthly_cost']
+                    total_service_cost = unit_cost * quantity
+                    
+                    if total_cost + total_service_cost <= budget:
+                        optimized.append({
+                            'name': service['name'],
+                            'type': mid_option['type'],
+                            'unit_monthly_cost': unit_cost,
+                            'quantity': quantity,
+                            'total_monthly_cost': total_service_cost,
+                            'reason': f"{mid_option['reason']} (재해대비)",
+                            'disaster_benefit': '재해상황 대응 강화'
+                        })
+                        total_cost += total_service_cost
+                        print(f"  Added {service['name']} ({mid_option['type']}): ${unit_cost} × {quantity} = ${total_service_cost}")
                     break
         
         # 나머지 서비스 처리
@@ -569,25 +637,42 @@ class AWSOptimizer:
                     optimized.append({
                         'name': service['name'],
                         'type': cheapest['type'],
-                        'monthly_cost': cheapest['monthly_cost'],
-                        'reason': cheapest['reason'],
+                        'unit_monthly_cost': cheapest['monthly_cost'],
                         'quantity': 1,
+                        'total_monthly_cost': cheapest['monthly_cost'],
+                        'reason': cheapest['reason'],
                         'disaster_benefit': '기본 서비스 지원'
                     })
                     total_cost += cheapest['monthly_cost']
+                    print(f"  Added {service['name']} ({cheapest['type']}): ${cheapest['monthly_cost']}")
+        
+        print(f"  Fallback Total: ${total_cost}")
+        print("=== Fallback Complete ===\n")
         
         return optimized, total_cost
     
     def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
-        """3단계 재해대비 최적화 프로세스 실행"""
+        """4단계 재해대비 최적화 프로세스 실행"""
+        print(f"\n{'='*60}")
+        print(f"Starting 4-Step AWS Architecture Optimization")
+        print(f"Budget: ${budget}/month | Region: {region}")
+        print(f"{'='*60}")
+        
         # 1단계: 재해상황 대비 필수 서비스 목록 추출
         required_services = self.step1_disaster_ready_services(service_type, users, performance, additional_info, region)
         
         # 2단계: 서비스별 가격 조회
         priced_services = self.step2_get_service_prices(required_services, region)
         
-        # 3단계: 예산 내 재해대비 최적 조합 추천
+        # 3단계: 예산 내 재해대비 최적 조합 추천 + 4단계: 정확한 비용 계산
         optimized_services, total_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region)
+        
+        print(f"\n{'='*60}")
+        print(f"Optimization Complete!")
+        print(f"Selected {len(optimized_services)} services")
+        print(f"Total Cost: ${total_cost:.2f}/month")
+        print(f"Budget Utilization: {(total_cost/budget)*100:.1f}%")
+        print(f"{'='*60}\n")
         
         return optimized_services, total_cost
     
@@ -709,20 +794,41 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         feasible = total_cost <= budget
         
         if feasible:
+            # 서비스별 상세 비용 정보 포함
+            services_summary = []
+            for service in optimized_services:
+                services_summary.append({
+                    'name': service['name'],
+                    'type': service['type'],
+                    'unit_cost': service['unit_monthly_cost'],
+                    'quantity': service['quantity'],
+                    'total_cost': service['total_monthly_cost'],
+                    'reason': service['reason'],
+                    'disaster_benefit': service['disaster_benefit']
+                })
+            
             response_data = {
                 'feasible': True,
-                'services': optimized_services,
-                'total_cost': total_cost,
+                'services': services_summary,
+                'total_cost': round(total_cost, 2),
                 'budget': budget,
                 'savings': round(budget - total_cost, 2),
-                'region': region
+                'budget_utilization': round((total_cost/budget)*100, 1),
+                'region': region,
+                'cost_breakdown': {
+                    'compute': sum(s['total_monthly_cost'] for s in optimized_services if 'EC2' in s['name'] or 'Lambda' in s['name']),
+                    'storage': sum(s['total_monthly_cost'] for s in optimized_services if 'S3' in s['name'] or 'RDS' in s['name']),
+                    'networking': sum(s['total_monthly_cost'] for s in optimized_services if 'CloudFront' in s['name'] or 'LoadBalancing' in s['name']),
+                    'other': sum(s['total_monthly_cost'] for s in optimized_services if not any(x in s['name'] for x in ['EC2', 'Lambda', 'S3', 'RDS', 'CloudFront', 'LoadBalancing']))
+                }
             }
         else:
             response_data = {
                 'feasible': False,
-                'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${total_cost}가 필요합니다.',
-                'minimum_budget': total_cost,
+                'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${total_cost:.2f}가 필요합니다.',
+                'minimum_budget': round(total_cost, 2),
                 'budget': budget,
+                'shortfall': round(total_cost - budget, 2),
                 'region': region
             }
         
