@@ -205,6 +205,14 @@ resource "aws_iam_policy" "bedrock_pricing_rds_policy" {
           "rds:DescribeDBClusters"
         ]
         Resource = "*"
+      },
+      {
+        Effect = "Allow"
+        Action = [
+          "ssm:GetParameter",
+          "ssm:GetParameters"
+        ]
+        Resource = "arn:aws:ssm:*:*:parameter/team02-hackathon/*"
       }
     ]
   })
@@ -265,6 +273,17 @@ resource "aws_db_instance" "main" {
 resource "random_password" "db_password" {
   length  = 16
   special = true
+}
+
+# Store RDS password in AWS Systems Manager Parameter Store
+resource "aws_ssm_parameter" "rds_password" {
+  name  = "/team02-hackathon/rds/password"
+  type  = "SecureString"
+  value = random_password.db_password.result
+
+  tags = {
+    Name = "${var.project_name}-rds-password"
+  }
 }
 
 # Instance Profile
@@ -383,19 +402,8 @@ NGINX_EOF
               git clone ${var.git_repo_url} repo || \
               echo "Repository clone failed, creating placeholder files"
               
-              # Set RDS environment variables
-              export RDS_ENDPOINT="${aws_db_instance.main.endpoint}"
-              export RDS_USERNAME="${aws_db_instance.main.username}"
-              export RDS_PASSWORD="${random_password.db_password.result}"
-              export RDS_DATABASE="${aws_db_instance.main.db_name}"
-              export RDS_PORT="${aws_db_instance.main.port}"
-              
-              # Add environment variables to .bashrc
-              echo "export RDS_ENDPOINT=${aws_db_instance.main.endpoint}" >> /home/ec2-user/.bashrc
-              echo "export RDS_USERNAME=${aws_db_instance.main.username}" >> /home/ec2-user/.bashrc
-              echo "export RDS_PASSWORD=${random_password.db_password.result}" >> /home/ec2-user/.bashrc
-              echo "export RDS_DATABASE=${aws_db_instance.main.db_name}" >> /home/ec2-user/.bashrc
-              echo "export RDS_PORT=${aws_db_instance.main.port}" >> /home/ec2-user/.bashrc
+              # RDS will be auto-discovered by the application
+              echo "RDS auto-discovery enabled - application will connect automatically"
               
               # Install Python and dependencies
               yum install -y python3 python3-pip
@@ -404,20 +412,10 @@ NGINX_EOF
               if [ -d "repo" ]; then
                 cp -r repo/* .
                 chmod +x start_servers.sh
+                chmod +x test_rds_connection.py 2>/dev/null || true
                 
-                # Install dependencies
-                pip3 install -r requirements.txt
-                
-                # Start RDS-enabled application
-                nohup python3 imsi_new.py > app.log 2>&1 &
-                
-                # Start frontend if exists
-                if [ -f "front/app.py" ]; then
-                  cd front
-                  pip3 install -r requirements.txt
-                  nohup python3 app.py > frontend.log 2>&1 &
-                  cd ..
-                fi
+                # Start servers (RDS will be auto-discovered)
+                nohup ./start_servers.sh > /home/ec2-user/server.log 2>&1 &
               else
                 # Fallback: create simple test server
                 pip3 install flask pymysql cryptography boto3
