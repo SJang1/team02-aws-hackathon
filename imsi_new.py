@@ -136,17 +136,22 @@ class AWSOptimizer:
                 body=body,
                 contentType="application/json"
             )
-
-            print(response['body'].read().decode('utf-8'))
             
             result = json.loads(response['body'].read())
             content = result['output']['message']['content'][0]['text']
             
-            start = content.find('{')
-            end = content.rfind('}') + 1
-            if start != -1 and end != -1:
-                analysis = json.loads(content[start:end])
-                return analysis['services']
+            # ```json 블록에서 JSON 추출
+            if '```json' in content:
+                start = content.find('```json') + 7
+                end = content.find('```', start)
+                json_str = content[start:end].strip()
+            else:
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                json_str = content[start:end]
+            
+            analysis = json.loads(json_str)
+            return analysis['services']
         except Exception as e:
             print(f"Step 1 Bedrock failed: {e}")
         
@@ -275,16 +280,21 @@ class AWSOptimizer:
                 contentType="application/json"
             )
 
-            print(response['body'].read().decode('utf-8'))
-            
             result = json.loads(response['body'].read())
             content = result['output']['message']['content'][0]['text']
             
-            start = content.find('{')
-            end = content.rfind('}') + 1
-            if start != -1 and end != -1:
-                optimization = json.loads(content[start:end])
-                return optimization['optimized_services'], optimization['total_cost']
+            # ```json 블록에서 JSON 추출
+            if '```json' in content:
+                start = content.find('```json') + 7
+                end = content.find('```', start)
+                json_str = content[start:end].strip()
+            else:
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                json_str = content[start:end]
+            
+            optimization = json.loads(json_str)
+            return optimization['optimized_services'], optimization['total_cost']
                 
         except Exception as e:
             print(f"Step 3 AI optimization failed: {e}")
