@@ -2,6 +2,7 @@ from flask import Flask, render_template, request, jsonify
 import requests
 
 app = Flask(__name__)
+
 BACKEND_URL = 'http://localhost:5000'  # imsi.py 서버 주소
 
 @app.route('/')
