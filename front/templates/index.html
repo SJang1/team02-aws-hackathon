@@ -17,36 +17,76 @@
         .nav-links a:hover { color: #667eea; }
         
         .hero { text-align: center; padding: 4rem 2rem; color: white; }
-        .hero h1 { font-size: 3rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); }
-        .hero p { font-size: 1.2rem; opacity: 0.9; max-width: 600px; margin: 0 auto; }
+        .hero h1 { font-size: 3rem; margin-bottom: 1rem; text-shadow: 2px 2px 4px rgba(0,0,0,0.3); opacity: 0; transform: translateY(30px); animation: fadeInScale 0.8s ease 0.1s forwards; }
+        .hero p { font-size: 1.2rem; opacity: 0; max-width: 600px; margin: 0 auto; transform: translateY(20px); animation: fadeInScale 0.8s ease 0.3s forwards; }
+        .hero-subtitle { margin-top: 1rem; }
+        .hero-subtitle p { font-size: 1rem; opacity: 0; max-width: 700px; margin: 0 auto; transform: translateY(20px); animation: fadeInScale 0.8s ease 0.5s forwards; }
         
         .container { max-width: 800px; margin: 0 auto; padding: 2rem; }
-        .card { background: white; border-radius: 20px; padding: 3rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1); margin-top: -2rem; position: relative; z-index: 1; }
+        .card { background: white; border-radius: 20px; padding: 3rem; box-shadow: 0 20px 40px rgba(0,0,0,0.1); margin-top: -2rem; position: relative; z-index: 1; opacity: 0; transform: translateY(30px); animation: fadeInScale 0.8s ease 0.3s forwards; }
         
         .form-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; }
         .form-group { margin-bottom: 1.5rem; }
         .form-group.full-width { grid-column: 1 / -1; }
         
         label { display: block; margin-bottom: 0.5rem; font-weight: 600; color: #333; font-size: 0.9rem; }
-        select, input, textarea { width: 100%; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 1rem; transition: all 0.3s; background: #f8f9fa; }
+        select, input, textarea { width: 100%; padding: 12px 16px; border: 2px solid #e1e5e9; border-radius: 12px; font-size: 1rem; transition: all 0.4s cubic-bezier(0.25, 0.46, 0.45, 0.94); background: #f8f9fa; }
+        select:hover, input:hover, textarea:hover { border-color: #c3d0ea; transform: translateY(-1px); }
         select:focus, input:focus, textarea:focus { outline: none; border-color: #667eea; background: white; box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1); }
         
         .custom-input { display: none; margin-top: 0.5rem; }
         .custom-input.show { display: block; }
         
-        .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: transform 0.3s, box-shadow 0.3s; }
-        .submit-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(102, 126, 234, 0.3); }
+        .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
+        .submit-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4); }
+        .submit-btn:active { transform: translateY(-1px) scale(0.98); }
+        .submit-btn::before { content: ''; position: absolute; top: 0; left: -100%; width: 100%; height: 100%; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent); transition: left 0.5s; }
+        .submit-btn:hover::before { left: 100%; }
         
-        #result { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; color: white; display: none; }
+        .loading { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 16px; color: white; display: none; text-align: center; opacity: 0; transform: translateY(20px); transition: all 0.5s ease; }
+        .loading.show { opacity: 1; transform: translateY(0); }
+        .result { margin-top: 2rem; padding: 2rem; background: linear-gradient(135deg, #f093fb 0%, #f5576c 100%); border-radius: 16px; color: white; display: none; opacity: 0; transform: translateY(20px) scale(0.95); transition: all 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
+        .result.show { opacity: 1; transform: translateY(0) scale(1); }
+        .result.success { background: linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%); }
+        .result.error { background: linear-gradient(135deg, #ff416c 0%, #ff4b2b 100%); }
+        .service-item { background: rgba(255,255,255,0.1); margin: 0.5rem 0; padding: 1rem; border-radius: 8px; opacity: 0; transform: translateX(-20px); animation: slideInLeft 0.6s ease forwards; }
+        .service-item:nth-child(2) { animation-delay: 0.1s; }
+        .service-item:nth-child(3) { animation-delay: 0.2s; }
+        .service-item:nth-child(4) { animation-delay: 0.3s; }
+        .cost-summary { background: rgba(255,255,255,0.2); padding: 1rem; border-radius: 8px; margin-top: 1rem; opacity: 0; transform: translateY(20px); animation: slideInUp 0.6s ease 0.4s forwards; }
+        .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1rem; display: inline-block; }
+        @keyframes spin { 
+            0% { transform: rotate(0deg); } 
+            100% { transform: rotate(360deg); } 
+        }
+        @keyframes slideInLeft { to { opacity: 1; transform: translateX(0); } }
+        @keyframes slideInUp { to { opacity: 1; transform: translateY(0); } }
+        @keyframes fadeInScale { 0% { opacity: 0; transform: scale(0.8); } 100% { opacity: 1; transform: scale(1); } }
         
         .features { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 2rem; margin: 4rem 2rem; padding: 0 2rem; }
-        .feature { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; color: white; }
+        .feature { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; color: white; opacity: 0; transform: translateY(30px); animation: fadeInScale 0.6s ease forwards; transition: transform 0.3s ease; }
+        .feature:nth-child(1) { animation-delay: 0.1s; }
+        .feature:nth-child(2) { animation-delay: 0.2s; }
+        .feature:nth-child(3) { animation-delay: 0.3s; }
+        .feature:hover { transform: translateY(-10px) scale(1.05); }
         .feature i { font-size: 3rem; margin-bottom: 1rem; }
+        
+        .guide-section { background: rgba(255,255,255,0.05); margin: 4rem 0; padding: 3rem 2rem; border-radius: 20px; }
+        .guide-section h2 { text-align: center; color: white; font-size: 2rem; margin-bottom: 3rem; opacity: 0; transform: translateY(20px); animation: fadeInScale 0.8s ease 0.2s forwards; }
+        .guide-steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; }
+        .step { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; color: white; opacity: 0; transform: translateY(30px); animation: fadeInScale 0.6s ease forwards; }
+        .step:nth-child(1) { animation-delay: 0.3s; }
+        .step:nth-child(2) { animation-delay: 0.4s; }
+        .step:nth-child(3) { animation-delay: 0.5s; }
+        .step-number { width: 50px; height: 50px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-size: 1.5rem; font-weight: bold; margin: 0 auto 1rem; }
+        .step h3 { margin-bottom: 1rem; font-size: 1.3rem; }
+        .step p { font-size: 0.95rem; line-height: 1.6; opacity: 0.9; }
         
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
             .nav-links { display: none; }
+            .guide-steps { grid-template-columns: 1fr; }
         }
     </style>
 </head>
@@ -64,8 +104,11 @@
     </nav>
     
     <section class="hero">
-        <h1><i class="fas fa-magic"></i> AWS 서비스 추천 플랫폼</h1>
-        <p>AI 기반으로 당신의 프로젝트에 최적화된 AWS 서비스 구성과 비용을 추천해드립니다</p>
+        <h1><i class="fas fa-magic"></i> ClOps - AWS 서비스 추천 플랫폼</h1>
+        <p>인디 개발자와 소규모 팀을 위한 AI 기반 AWS 아키텍처 추천 및 컨설팅 플랫폼</p>
+        <div class="hero-subtitle">
+            <p>갑작스러운 트래픽 급증에도 다운타임 없는 확장 가능한 인프라를 자동으로 설계해드립니다</p>
+        </div>
     </section>
     
     <div class="features">
@@ -94,12 +137,12 @@
             <label for="serviceType">서비스 유형:</label>
             <select id="serviceType" required>
                 <option value="">선택하세요</option>
+                <option value="인디 게임">인디 게임</option>
                 <option value="웹사이트/웹앱">웹사이트/웹앱</option>
                 <option value="API 서버">API 서버</option>
-                <option value="데이터베이스">데이터베이스</option>
-                <option value="머신러닝/AI">머신러닝/AI</option>
-                <option value="파일 저장소">파일 저장소</option>
+                <option value="모바일 앱 백엔드">모바일 앱 백엔드</option>
                 <option value="데이터 분석">데이터 분석</option>
+                <option value="머신러닝/AI">머신러닝/AI</option>
                 <option value="기타">기타</option>
             </select>
             <input type="text" id="customServiceType" class="custom-input" placeholder="서비스 유형을 직접 입력하세요">
@@ -163,10 +206,36 @@
         </div>
     </form>
     
-        <div id="result">
-            <h3><i class="fas fa-cog fa-spin"></i> AI가 분석 중입니다...</h3>
-            <p id="status">최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
+        <div id="loading" class="loading">
+            <div class="spinner"></div>
+            <h3><i class="fas fa-robot"></i> AI가 분석 중입니다...</h3>
+            <p>최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
         </div>
+        
+        <div id="result" class="result">
+            <div id="result-content"></div>
+        </div>
+        </div>
+        
+        <div class="guide-section">
+            <h2><i class="fas fa-compass"></i> 사용 가이드</h2>
+            <div class="guide-steps">
+                <div class="step">
+                    <div class="step-number">1</div>
+                    <h3>요구사항 입력</h3>
+                    <p>서비스 종류(게임, 웹앱), 예상 사용자 수, 핵심 기능, 월 가용 예산 등 간단한 정보를 입력하세요.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">2</div>
+                    <h3>AI 분석 및 설계</h3>
+                    <p>전문화된 AI 에이전트들이 트래픽 패턴 예측, 아키텍처 설계, AWS 서비스 매핑을 순차적으로 수행합니다.</p>
+                </div>
+                <div class="step">
+                    <div class="step-number">3</div>
+                    <h3>결과 리포트 확인</h3>
+                    <p>추천 아키텍처 다이어그램, 구성 가이드, 상세 비용 분석이 담긴 종합 리포트를 받아보세요.</p>
+                </div>
+            </div>
         </div>
     </div>
 
@@ -197,6 +266,13 @@
         document.getElementById('estimateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
             
+            // 버튼 애니메이션
+            const submitBtn = document.querySelector('.submit-btn');
+            submitBtn.style.transform = 'scale(0.95)';
+            setTimeout(() => {
+                submitBtn.style.transform = '';
+            }, 150);
+            
             // 값 가져오기 (기타 선택 시 커스텀 입력값 사용)
             const serviceType = document.getElementById('serviceType').value === '기타' ? 
                 document.getElementById('customServiceType').value : document.getElementById('serviceType').value;
@@ -209,7 +285,14 @@
             const additionalInfo = document.getElementById('additionalInfo').value;
             const budget = document.getElementById('budget').value;
             
-            document.getElementById('result').style.display = 'block';
+            // 부드러운 스크롤 애니메이션
+            setTimeout(() => {
+                showLoading();
+                document.getElementById('loading').scrollIntoView({ 
+                    behavior: 'smooth', 
+                    block: 'center' 
+                });
+            }, 200);
             
             try {
                 const response = await fetch('/optimize', {
@@ -226,39 +309,91 @@
                 });
                 
                 const data = await response.json();
-                const uuid = data.uuid;
                 
-                // 폴링 시작
+                if (data.error) {
+                    showError(`오류: ${data.error}`);
+                    return;
+                }
+                
+                const uuid = data.uuid;
+                if (!uuid) {
+                    showError('UUID를 받지 못했습니다.');
+                    return;
+                }
+                
                 pollResult(uuid);
             } catch (error) {
-                document.getElementById('status').textContent = '오류가 발생했습니다.';
+                showError('오류가 발생했습니다.');
             }
         });
         
+        function showLoading() {
+            const loading = document.getElementById('loading');
+            const result = document.getElementById('result');
+            
+            result.classList.remove('show');
+            setTimeout(() => {
+                result.style.display = 'none';
+                loading.style.display = 'block';
+                setTimeout(() => loading.classList.add('show'), 10);
+            }, 300);
+        }
+        
+        function showResult(content, isSuccess = true) {
+            const loading = document.getElementById('loading');
+            const resultDiv = document.getElementById('result');
+            
+            loading.classList.remove('show');
+            setTimeout(() => {
+                loading.style.display = 'none';
+                resultDiv.className = isSuccess ? 'result success' : 'result error';
+                resultDiv.style.display = 'block';
+                document.getElementById('result-content').innerHTML = content;
+                setTimeout(() => resultDiv.classList.add('show'), 10);
+            }, 300);
+        }
+        
+        function showError(message) {
+            showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 오류</h3><p>${message}</p>`, false);
+        }
+        
         async function pollResult(uuid) {
+            if (!uuid || uuid === 'undefined') {
+                showError('잘못된 UUID입니다.');
+                return;
+            }
+            
             try {
                 const response = await fetch(`/status/${uuid}`);
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
                     if (data.feasible) {
-                        let servicesHtml = '<h4>추천 서비스:</h4><ul>';
+                        let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                        content += '<div class="services-list">';
                         data.services.forEach(service => {
-                            servicesHtml += `<li>${service.name} (${service.type}): $${service.monthly_cost}/월 - ${service.reason}</li>`;
+                            content += `<div class="service-item">`;
+                            content += `<strong>${service.name}</strong> (${service.type})`;
+                            content += `<br><span>$${service.monthly_cost}/월 - ${service.reason}</span>`;
+                            content += `</div>`;
                         });
-                        servicesHtml += `</ul><p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
-                        servicesHtml += `<p>예산 내 절약: $${data.savings}</p>`;
-                        document.getElementById('status').innerHTML = `<strong><i class="fas fa-check-circle"></i> 분석 완료!</strong><br>${servicesHtml}`;
+                        content += '</div>';
+                        content += `<div class="cost-summary">`;
+                        content += `<h4>비용 요약</h4>`;
+                        content += `<p><strong>총 비용: $${data.total_cost}/월</strong></p>`;
+                        content += `<p>예산 내 절약: $${data.savings}</p>`;
+                        content += `</div>`;
+                        showResult(content, true);
                     } else {
-                        document.getElementById('status').innerHTML = `<strong><i class="fas fa-exclamation-triangle"></i> 예산 부족</strong><br><p>${data.message}</p>`;
+                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>${data.message}</p>`, false);
                     }
                 } else if (data.status === 'failed') {
-                    document.getElementById('status').innerHTML = '<i class="fas fa-exclamation-triangle"></i> 처리 실패';
+                    showError('처리 실패');
                 } else {
                     setTimeout(() => pollResult(uuid), 2000);
                 }
             } catch (error) {
-                document.getElementById('status').textContent = '폴링 오류';
+                showError('폴링 오류');
             }
         }
     </script>
