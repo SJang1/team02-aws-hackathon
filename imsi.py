@@ -432,10 +432,11 @@ def process_optimization(request_uuid, service_type, users, performance, additio
 def create_optimization():
     data = request.json
     
-    service_type = data.get('serviceType', '')
-    users = data.get('expectedUsers', '선택안됨')
+    # {"service_type":"API","users":"엔터프라이즈","performance":"최고성능","additional_info":"","budget":1000000,"region":"ap-northeast-2"}
+    service_type = data.get('service_type', '')
+    users = data.get('users', '선택안됨')
     performance = data.get('performance', '선택안됨')
-    additional_info = data.get('additionalInfo', '정보없음')
+    additional_info = data.get('additional_info', '정보없음')
     budget = float(data.get('budget', 100))
     region = data.get('region', 'us-east-1')
     
