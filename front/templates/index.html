@@ -36,6 +36,9 @@
         
         .custom-input { display: none; margin-top: 0.5rem; }
         .custom-input.show { display: block; }
+        #customResourceConfig { padding: 1rem; background: #f8f9fa; border-radius: 8px; margin-top: 1rem; }
+        #customResourceConfig label { margin-top: 0.5rem; margin-bottom: 0.3rem; font-size: 0.85rem; }
+        #customResourceConfig input { margin-bottom: 0.5rem; }
         
         .submit-btn { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 16px 32px; border: none; border-radius: 12px; font-size: 1.1rem; font-weight: 600; cursor: pointer; width: 100%; transition: all 0.4s cubic-bezier(0.175, 0.885, 0.32, 1.275); position: relative; overflow: hidden; }
         .submit-btn:hover { transform: translateY(-3px) scale(1.02); box-shadow: 0 15px 35px rgba(102, 126, 234, 0.4); }
@@ -163,16 +166,20 @@
             </div>
         
             <div class="form-group">
-                <label for="performance">성능 요구사항:</label>
-                <select id="performance" required>
+                <label for="resourceAllocation">사용자당 리소스 할당:</label>
+                <select id="resourceAllocation" required>
                     <option value="">선택하세요</option>
-                    <option value="기본">기본 성능</option>
-                    <option value="중간">중간 성능</option>
-                    <option value="고성능">고성능</option>
-                    <option value="최고성능">최고 성능</option>
-                    <option value="기타">기타</option>
+                    <option value="권장 자동 할당">권장 자동 할당 (AI 추천)</option>
+                    <option value="사용자 지정">사용자 직접 설정</option>
                 </select>
-                <input type="text" id="customPerformance" class="custom-input" placeholder="성능 요구사항을 직접 입력하세요">
+                <div id="customResourceConfig" class="custom-input">
+                    <label for="cpuPerUser">CPU (GHz/사용자):</label>
+                    <input type="number" id="cpuPerUser" step="0.1" min="0.1" placeholder="1.0">
+                    <label for="memoryPerUser">메모리 (GB/사용자):</label>
+                    <input type="number" id="memoryPerUser" step="0.1" min="0.1" placeholder="1.0">
+                    <label for="storagePerUser">스토리지 (GB/사용자):</label>
+                    <input type="number" id="storagePerUser" step="1" min="1" placeholder="10">
+                </div>
             </div>
         
             <div class="form-group">
@@ -260,8 +267,23 @@
         // 각 선택 상자에 대해 커스텀 입력 기능 활성화
         toggleCustomInput('serviceType', 'customServiceType');
         toggleCustomInput('expectedUsers', 'customExpectedUsers');
-        toggleCustomInput('performance', 'customPerformance');
         toggleCustomInput('region', 'customRegion');
+        
+        // 리소스 할당 옵션 처리
+        document.getElementById('resourceAllocation').addEventListener('change', function() {
+            const customConfig = document.getElementById('customResourceConfig');
+            if (this.value === '사용자 지정') {
+                customConfig.classList.add('show');
+                document.getElementById('cpuPerUser').required = true;
+                document.getElementById('memoryPerUser').required = true;
+                document.getElementById('storagePerUser').required = true;
+            } else {
+                customConfig.classList.remove('show');
+                document.getElementById('cpuPerUser').required = false;
+                document.getElementById('memoryPerUser').required = false;
+                document.getElementById('storagePerUser').required = false;
+            }
+        });
         
         document.getElementById('estimateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -278,8 +300,20 @@
                 document.getElementById('customServiceType').value : document.getElementById('serviceType').value;
             const expectedUsers = document.getElementById('expectedUsers').value === '기타' ? 
                 document.getElementById('customExpectedUsers').value : document.getElementById('expectedUsers').value;
-            const performance = document.getElementById('performance').value === '기타' ? 
-                document.getElementById('customPerformance').value : document.getElementById('performance').value;
+            
+            // 리소스 할당 데이터 처리
+            const resourceAllocation = document.getElementById('resourceAllocation').value;
+            let resourceConfig = {};
+            if (resourceAllocation === '사용자 지정') {
+                resourceConfig = {
+                    type: 'custom',
+                    cpuPerUser: parseFloat(document.getElementById('cpuPerUser').value),
+                    memoryPerUser: parseFloat(document.getElementById('memoryPerUser').value),
+                    storagePerUser: parseInt(document.getElementById('storagePerUser').value)
+                };
+            } else {
+                resourceConfig = { type: 'auto' };
+            }
             const region = document.getElementById('region').value === '기타' ? 
                 document.getElementById('customRegion').value : document.getElementById('region').value;
             const additionalInfo = document.getElementById('additionalInfo').value;
@@ -301,7 +335,7 @@
                     body: JSON.stringify({ 
                         service_type: serviceType,
                         users: expectedUsers,
-                        performance: performance,
+                        resource_config: resourceConfig,
                         additional_info: additionalInfo || '',
                         budget: parseInt(budget),
                         region: region 
