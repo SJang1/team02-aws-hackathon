@@ -196,15 +196,34 @@ class AWSOptimizer:
             ]
         }
         
+        # 서비스 이름 매핑
+        service_mapping = {
+            'Amazon SageMaker': 'SageMaker',
+            'AWS Lambda': 'Lambda', 
+            'Amazon S3': 'S3',
+            'Amazon EMR': 'EC2',  # EMR은 EC2 기반
+            'Amazon Kinesis': 'Lambda',  # Kinesis는 Lambda로 대체
+            'AWS Glue': 'Lambda',  # Glue는 Lambda로 대체
+            'Amazon Athena': 'S3',  # Athena는 S3 기반
+            'Amazon CloudWatch': 'CloudFront',  # CloudWatch는 CloudFront로 대체
+            'AWS Auto Scaling': 'EC2',  # Auto Scaling은 EC2 기반
+            'Amazon Elastic Kubernetes Service (EKS)': 'EC2',  # EKS는 EC2 기반
+            'AWS Step Functions': 'Lambda',  # Step Functions는 Lambda 기반
+            'Amazon API Gateway': 'Lambda'  # API Gateway는 Lambda 기반
+        }
+        
         priced_services = []
         for service in services:
             service_name = service['name']
             print(f"\n=== Processing {service_name} ===\n")
             
-            if service_name in service_options:
+            # 서비스 이름 매핑 적용
+            mapped_name = service_mapping.get(service_name, service_name)
+            
+            if mapped_name in service_options:
                 options = []
-                for option in service_options[service_name]:
-                    price = self.get_pricing(service_name, option, region)
+                for option in service_options[mapped_name]:
+                    price = self.get_pricing(mapped_name, option, region)
                     if price is not None:
                         options.append({
                             'type': option,
@@ -215,12 +234,12 @@ class AWSOptimizer:
                 if options:
                     sorted_options = sorted(options, key=lambda x: x['monthly_cost'])
                     priced_services.append({
-                        'name': service_name,
+                        'name': mapped_name,
                         'reason': service['reason'],
                         'options': sorted_options
                     })
                     
-                    print(f"\n{service_name} pricing completed:")
+                    print(f"\n{service_name} -> {mapped_name} pricing completed:")
                     for i, opt in enumerate(sorted_options[:5]):
                         print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']}/month")
                     print(f"  Total {len(sorted_options)} options available\n")
