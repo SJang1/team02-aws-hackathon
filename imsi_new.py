@@ -17,13 +17,14 @@ requests_store = {}
 class AWSOptimizer:
     def __init__(self):
         self.pricing_cache = {}
+        self.aws_services_cache = None
         self.fallback_costs = {
-            'EC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34, 't3.medium': 38, 't3.large': 76},
-            'RDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
-            'ALB': {'application': 22},
-            'S3': {'standard': 23},
-            'SageMaker': {'ml.t3.medium': 45, 'ml.t3.large': 90},
-            'Lambda': {'requests': 0.2}
+            'AmazonEC2': {'t2.nano': 4.2, 't2.micro': 8.5, 't2.small': 17, 't2.medium': 34, 't3.medium': 38, 't3.large': 76},
+            'AmazonRDS': {'db.t3.micro': 15, 'db.t3.small': 30, 'db.t3.medium': 60, 'db.t3.large': 120},
+            'ElasticLoadBalancing': {'application': 22},
+            'AmazonS3': {'standard': 23},
+            'AmazonSageMaker': {'ml.t3.medium': 45, 'ml.t3.large': 90},
+            'AWSLambda': {'requests': 0.2}
         }
     
     def get_pricing(self, service, instance_type, region='us-east-1'):
@@ -48,7 +49,7 @@ class AWSOptimizer:
         }
         
         service_configs = {
-            'EC2': {
+            'AmazonEC2': {
                 'ServiceCode': 'AmazonEC2',
                 'filters': [
                     {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
@@ -56,7 +57,7 @@ class AWSOptimizer:
                     {'Type': 'TERM_MATCH', 'Field': 'tenancy', 'Value': 'Shared'}
                 ]
             },
-            'RDS': {
+            'AmazonRDS': {
                 'ServiceCode': 'AmazonRDS',
                 'filters': [
                     {'Type': 'TERM_MATCH', 'Field': 'instanceType', 'Value': instance_type},
@@ -95,9 +96,36 @@ class AWSOptimizer:
         
         return None
     
+    def get_all_aws_services(self):
+        """AWS의 모든 서비스 목록을 가져오기"""
+        if self.aws_services_cache:
+            return self.aws_services_cache
+        
+        try:
+            response = pricing_client.describe_services()
+            services = []
+            for service in response['Services']:
+                services.append({
+                    'ServiceCode': service['ServiceCode'],
+                    'ServiceName': service.get('ServiceName', service['ServiceCode'])
+                })
+            
+            self.aws_services_cache = services
+            print(f"Loaded {len(services)} AWS services")
+            return services
+        except Exception as e:
+            print(f"Failed to get AWS services: {e}")
+            return []
+    
     def step1_get_required_services(self, service_type, users, performance, additional_info, region='us-east-1'):
         """1단계: AI를 통해 필요한 서비스 목록 추출"""
         try:
+            # AWS 모든 서비스 목록 가져오기
+            aws_services = self.get_all_aws_services()
+            services_list = "\n".join([f"- {s['ServiceCode']}: {s['ServiceName']}" for s in aws_services])  # 처음 50개만
+
+            print(services_list)
+            
             bedrock_prompt = f"""
             AWS 서비스 추천 요청:
             - 서비스 유형: {service_type}
@@ -106,16 +134,19 @@ class AWSOptimizer:
             - 추가 요구사항: {additional_info}
             - 리전: {region}
             
+            사용 가능한 AWS 서비스 목록:
+            {services_list}
+            
+            위 서비스 목록에서 요구사항에 맞는 서비스들을 선택해주세요.
             예산은 고려하지 말고, 이상적인 아키텍처를 위해 필요한 AWS 서비스들을 나열해주세요.
-            인스턴스 타입은 지정하지 말고 서비스 이름만 나열해주세요.
-            오토스케일링 등도 전부 고려 해 주세요.
+            인스턴스 타입은 지정하지 말고 서비스 코드만 나열해주세요.
             
             예시 응답:
             {{
                 "services": [
-                    {{"name": "EC2", "reason": "웹서버 호스팅"}},
-                    {{"name": "RDS", "reason": "데이터베이스 저장"}},
-                    {{"name": "ALB", "reason": "로드 밸런싱"}}
+                    {{"name": "AmazonEC2", "reason": "웹서버 호스팅"}},
+                    {{"name": "AmazonRDS", "reason": "데이터베이스 저장"}},
+                    {{"name": "ElasticLoadBalancing", "reason": "로드 밸런싱"}}
                 ]
             }}
             """
@@ -157,95 +188,85 @@ class AWSOptimizer:
         
         return self._fallback_services(service_type)
     
+    def get_service_options(self, service_code, region='us-east-1'):
+        """특정 서비스의 모든 옵션을 가져오기"""
+        location_map = {
+            'us-east-1': 'US East (N. Virginia)',
+            'us-west-2': 'US West (Oregon)',
+            'ap-northeast-2': 'Asia Pacific (Seoul)'
+        }
+        
+        try:
+            filters = [{
+                'Type': 'TERM_MATCH',
+                'Field': 'location',
+                'Value': location_map.get(region, 'US East (N. Virginia)')
+            }]
+            
+            response = pricing_client.get_products(
+                ServiceCode=service_code,
+                Filters=filters,
+                MaxResults=100
+            )
+            
+            options = set()
+            for product_str in response['PriceList']:
+                product = json.loads(product_str)
+                attributes = product.get('product', {}).get('attributes', {})
+                
+                # EC2 인스턴스 타입
+                if 'instanceType' in attributes:
+                    options.add(attributes['instanceType'])
+                # RDS 인스턴스 타입
+                elif 'instanceClass' in attributes:
+                    options.add(attributes['instanceClass'])
+                # S3 스토리지 클래스
+                elif 'storageClass' in attributes:
+                    options.add(attributes['storageClass'])
+                # 기타 서비스는 기본값
+                else:
+                    options.add('standard')
+            
+            return list(options)
+            
+        except Exception as e:
+            print(f"Failed to get options for {service_code}: {e}")
+            return ['standard']  # 기본값 반환
+    
     def step2_get_service_prices(self, services, region='us-east-1'):
         """2단계: 각 서비스의 다양한 옵션별 가격 조회"""
-        service_options = {
-            'EC2': [
-                't2.nano', 't2.micro', 't2.small', 't2.medium', 't2.large', 't2.xlarge',
-                't3.nano', 't3.micro', 't3.small', 't3.medium', 't3.large', 't3.xlarge', 't3.2xlarge',
-                't3a.nano', 't3a.micro', 't3a.small', 't3a.medium', 't3a.large', 't3a.xlarge',
-                'm5.large', 'm5.xlarge', 'm5.2xlarge', 'm5.4xlarge',
-                'm6i.large', 'm6i.xlarge', 'm6i.2xlarge',
-                'c5.large', 'c5.xlarge', 'c5.2xlarge',
-                'r5.large', 'r5.xlarge', 'r5.2xlarge'
-            ],
-            'RDS': [
-                'db.t3.micro', 'db.t3.small', 'db.t3.medium', 'db.t3.large', 'db.t3.xlarge', 'db.t3.2xlarge',
-                'db.t4g.micro', 'db.t4g.small', 'db.t4g.medium', 'db.t4g.large',
-                'db.m5.large', 'db.m5.xlarge', 'db.m5.2xlarge', 'db.m5.4xlarge',
-                'db.m6i.large', 'db.m6i.xlarge', 'db.m6i.2xlarge',
-                'db.r5.large', 'db.r5.xlarge', 'db.r5.2xlarge'
-            ],
-            'ALB': ['application'],
-            'NLB': ['network'],
-            'S3': ['standard', 'intelligent_tiering', 'standard_ia', 'onezone_ia', 'glacier', 'deep_archive'],
-            'SageMaker': [
-                'ml.t3.medium', 'ml.t3.large', 'ml.t3.xlarge', 'ml.t3.2xlarge',
-                'ml.m5.large', 'ml.m5.xlarge', 'ml.m5.2xlarge', 'ml.m5.4xlarge',
-                'ml.c5.large', 'ml.c5.xlarge', 'ml.c5.2xlarge',
-                'ml.p3.2xlarge', 'ml.p3.8xlarge'
-            ],
-            'Lambda': ['requests', 'duration'],
-            'CloudFront': ['standard', 'price_class_100', 'price_class_200'],
-            'ElastiCache': [
-                'cache.t3.micro', 'cache.t3.small', 'cache.t3.medium',
-                'cache.m5.large', 'cache.m5.xlarge', 'cache.r5.large'
-            ],
-            'OpenSearch': [
-                't3.small.search', 't3.medium.search', 'm5.large.search', 'm5.xlarge.search'
-            ]
-        }
-        
-        # 서비스 이름 매핑
-        service_mapping = {
-            'Amazon SageMaker': 'SageMaker',
-            'AWS Lambda': 'Lambda', 
-            'Amazon S3': 'S3',
-            'Amazon EMR': 'EC2',
-            'Amazon Kinesis': 'Lambda',
-            'AWS Glue': 'Lambda',
-            'Amazon Athena': 'S3',
-            'Amazon CloudWatch': 'CloudFront',
-            'AWS Auto Scaling': 'EC2',
-            'Amazon Elastic Kubernetes Service (EKS)': 'EC2',
-            'AWS Step Functions': 'Lambda',
-            'Amazon API Gateway': 'Lambda',
-            'Amazon Elasticsearch Service': 'OpenSearch',
-            'AWS IAM': 'Lambda',  # IAM은 Lambda로 대체
-            'Amazon VPC': 'EC2'  # VPC는 EC2 기반
-        }
-        
         priced_services = []
+        
         for service in services:
             service_name = service['name']
             print(f"\n=== Processing {service_name} ===\n")
             
-            # 서비스 이름 매핑 적용
-            mapped_name = service_mapping.get(service_name, service_name)
+            # 해당 서비스의 모든 옵션 가져오기
+            service_options = self.get_service_options(service_name, region)
+            print(f"Found {len(service_options)} options for {service_name}")
             
-            if mapped_name in service_options:
-                options = []
-                for option in service_options[mapped_name]:
-                    price = self.get_pricing(mapped_name, option, region)
-                    if price is not None:
-                        options.append({
-                            'type': option,
-                            'monthly_cost': price,
-                            'reason': service['reason']
-                        })
-                
-                if options:
-                    sorted_options = sorted(options, key=lambda x: x['monthly_cost'])
-                    priced_services.append({
-                        'name': mapped_name,
-                        'reason': service['reason'],
-                        'options': sorted_options
+            options = []
+            for option in service_options:
+                price = self.get_pricing(service_name, option, region)
+                if price is not None:
+                    options.append({
+                        'type': option,
+                        'monthly_cost': price,
+                        'reason': service['reason']
                     })
-                    
-                    print(f"\n{service_name} -> {mapped_name} pricing completed:")
-                    for i, opt in enumerate(sorted_options[:5]):
-                        print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']}/month")
-                    print(f"  Total {len(sorted_options)} options available\n")
+            
+            if options:
+                sorted_options = sorted(options, key=lambda x: x['monthly_cost'])
+                priced_services.append({
+                    'name': service_name,
+                    'reason': service['reason'],
+                    'options': sorted_options
+                })
+                
+                print(f"\n{service_name} pricing completed:")
+                for i, opt in enumerate(sorted_options):
+                    print(f"  {i+1}. {opt['type']}: ${opt['monthly_cost']}/month")
+                print(f"  Total {len(sorted_options)} options available\n")
         
         print(f"\n=== Step 2 Complete: {len(priced_services)} services priced ===\n")
         return priced_services
@@ -361,18 +382,18 @@ class AWSOptimizer:
         """AI 실패 시 기본 서비스 목록"""
         if service_type in ['웹사이트', 'API'] or 'web' in service_type.lower():
             return [
-                {'name': 'EC2', 'reason': '웹서버'},
-                {'name': 'RDS', 'reason': '데이터베이스'}
+                {'name': 'AmazonEC2', 'reason': '웹서버'},
+                {'name': 'AmazonRDS', 'reason': '데이터베이스'}
             ]
         elif service_type == '데이터베이스':
-            return [{'name': 'RDS', 'reason': '데이터베이스'}]
+            return [{'name': 'AmazonRDS', 'reason': '데이터베이스'}]
         elif service_type == '머신러닝':
             return [
-                {'name': 'EC2', 'reason': 'ML 워크로드'},
-                {'name': 'S3', 'reason': '데이터 저장소'}
+                {'name': 'AmazonEC2', 'reason': 'ML 워크로드'},
+                {'name': 'AmazonS3', 'reason': '데이터 저장소'}
             ]
         else:
-            return [{'name': 'EC2', 'reason': '기본 서버'}]
+            return [{'name': 'AmazonEC2', 'reason': '기본 서버'}]
 
 optimizer = AWSOptimizer()
 
