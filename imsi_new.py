@@ -87,6 +87,13 @@ def get_db_connection():
         RDS_CONFIG['database'] = rds_info['database']
         print(f"Updated RDS config from AWS API: {rds_info['endpoint']}")
     
+    # Handle case where host includes port (e.g., "host:3306")
+    if ':' in RDS_CONFIG['host']:
+        host_parts = RDS_CONFIG['host'].split(':')
+        RDS_CONFIG['host'] = host_parts[0]
+        if len(host_parts) > 1 and host_parts[1].isdigit():
+            RDS_CONFIG['port'] = int(host_parts[1])
+    
     # Try to get password from environment first, then from AWS
     if not RDS_CONFIG['password']:
         password = get_rds_password_from_secrets()
