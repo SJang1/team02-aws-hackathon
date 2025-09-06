@@ -1342,18 +1342,21 @@
         
         // AWS 서비스 링크 매핑
         const awsServiceLinks = {
-            'EC2': 'https://aws.amazon.com/ec2/',
-            'RDS': 'https://aws.amazon.com/rds/',
-            'S3': 'https://aws.amazon.com/s3/',
-            'Lambda': 'https://aws.amazon.com/lambda/',
-            'ALB': 'https://aws.amazon.com/elasticloadbalancing/',
-            'CloudFront': 'https://aws.amazon.com/cloudfront/',
-            'SageMaker': 'https://aws.amazon.com/sagemaker/',
-            'DynamoDB': 'https://aws.amazon.com/dynamodb/',
-            'ElastiCache': 'https://aws.amazon.com/elasticache/',
-            'VPC': 'https://aws.amazon.com/vpc/',
-            'WAF': 'https://aws.amazon.com/waf/',
-            'CloudWatch': 'https://aws.amazon.com/cloudwatch/'
+            'EC2': 'https://aws.amazon.com/ko/ec2/',
+            'RDS': 'https://aws.amazon.com/ko/rds/',
+            'S3': 'https://aws.amazon.com/ko/s3/',
+            'Lambda': 'https://aws.amazon.com/ko/lambda/',
+            'ALB': 'https://aws.amazon.com/ko/elasticloadbalancing/',
+            'ElasticLoadBalancingV2': 'https://aws.amazon.com/ko/elasticloadbalancing/',
+            'CloudFront': 'https://aws.amazon.com/ko/cloudfront/',
+            'SageMaker': 'https://aws.amazon.com/ko/sagemaker/',
+            'DynamoDB': 'https://aws.amazon.com/ko/dynamodb/',
+            'ElastiCache': 'https://aws.amazon.com/ko/elasticache/',
+            'VPC': 'https://aws.amazon.com/ko/vpc/',
+            'WAF': 'https://aws.amazon.com/ko/waf/',
+            'AWSWAF': 'https://aws.amazon.com/ko/waf/',
+            'CloudWatch': 'https://aws.amazon.com/ko/cloudwatch/',
+            'Route53': 'https://aws.amazon.com/ko/route53/'
         };
         
         // 서비스 아이콘 매핑
@@ -1476,8 +1479,17 @@
         
         // 서비스 이유 표시 함수
         function showServiceReason(serviceName, reason) {
+            const serviceLink = awsServiceLinks[serviceName] || `https://aws.amazon.com/ko/${serviceName.toLowerCase()}/`;
+            
             document.getElementById('serviceModalTitle').textContent = serviceName + ' 서비스';
-            document.getElementById('serviceModalText').textContent = '추천 이유: ' + reason;
+            document.getElementById('serviceModalText').innerHTML = `
+                <p><strong>추천 이유:</strong> ${reason}</p>
+                <div style="margin-top: 1rem;">
+                    <a href="${serviceLink}" target="_blank" style="display: inline-block; background: #FF9500; color: white; padding: 0.5rem 1rem; text-decoration: none; border-radius: 4px; font-weight: bold;">
+                        <i class="fas fa-external-link-alt"></i> AWS 공식 페이지 보기
+                    </a>
+                </div>
+            `;
             document.getElementById('serviceModal').style.display = 'block';
         }
         
