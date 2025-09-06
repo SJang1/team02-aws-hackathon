@@ -960,20 +960,21 @@ def try_to_squeeze_budget(services, budget, service_type, users, performance, ad
         body=body,
         contentType="application/json"
     )
-            
+
     result = json.loads(response['body'].read())
-    content = result['output']['message']['content'][0]['text']
+    print(result)
+    res = result['output']['message']['content'][0]['text']
             
             # ```json 블록에서 JSON 추출
-    if '```json' in content:
-        start = content.find('```json') + 7
-        end = content.find('```', start)
-        json_str = content[start:end].strip()
+    if '```json' in res:
+        start = res.find('```json') + 7
+        end = res.find('```', start)
+        json_str = res[start:end].strip()
     else:
-        start = content.find('{')
-        end = content.rfind('}') + 1
-        json_str = content[start:end]
-            
+        start = res.find('{')
+        end = res.rfind('}') + 1
+        json_str = res[start:end]
+        
         recalculation = json.loads(json_str)
         recalculated_services = recalculation['recalculated_services']
         total_cost = recalculation['total_cost']
