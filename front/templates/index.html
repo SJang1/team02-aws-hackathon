@@ -993,16 +993,19 @@
         function generateServiceBlock(service) {
             const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
             const icon = serviceIcons[serviceName] || 'fas fa-cube';
-            const link = awsServiceLinks[serviceName] || '#';
+            const unitCost = service.total_cost / service.quantity;
             
-            return `
-                <div class="service-block" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                    <div class="service-icon"><i class="${icon}"></i></div>
-                    <div class="service-name">${serviceName}</div>
-                    <div class="service-type">${service.type}</div>
-                    <div class="service-cost">$${service.total_cost.toFixed(2)}/월</div>
-                    <div class="service-quantity">수량: ${service.quantity}</div>
-                </div>
-            `;
+            let blocks = '';
+            for (let i = 0; i < service.quantity; i++) {
+                blocks += `
+                    <div class="service-block" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                        <div class="service-icon"><i class="${icon}"></i></div>
+                        <div class="service-name">${serviceName}</div>
+                        <div class="service-type">${service.type}</div>
+                        <div class="service-cost">$${unitCost}/월</div>
+                    </div>
+                `;
+            }
+            return blocks;
         }
         
         // 서비스 이유 표시 함수
