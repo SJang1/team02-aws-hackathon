@@ -110,6 +110,8 @@
 
 ### 2. 배포 진행
 - `cd terraform` (테라폼 폴더에 진입합니다.)
+- `cp terraform.tfvars.example terraform.tfvars` (테라폼 설정파일을 복사합니다.)
+- `vi terraform.tfvars` (테라폼 설정파일에서 필요한 값을 설정합니다.)
 - `terraform init` (테라폼을 init 합니다.)
 - `terraform plan` (테라폼을 계획 합니다.)
 - `terraform apply` (테라폼을 적용합니다.)
