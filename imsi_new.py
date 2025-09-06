@@ -490,8 +490,8 @@ class AWSOptimizer:
             응답 형식:
             {{
                 "disaster_ready_services": [
-                    {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": number, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1, "disaster_benefit": "트래픽 급증 시 오리진 서버 부하 감소"}},
-                    {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": number, "reason": "Auto Scaling 웹서버", "quantity": 2, "disaster_benefit": "자동 확장으로 트래픽 급증 대응"}}
+                    {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": number, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1}},
+                    {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": number, "reason": "Auto Scaling 웹서버", "quantity": 2}}
                 ],
                 "total_cost": 150,
                 "disaster_readiness_score": 85,
@@ -590,8 +590,7 @@ class AWSOptimizer:
                 'unit_monthly_cost': unit_cost,
                 'quantity': quantity,
                 'total_monthly_cost': total_cost,
-                'reason': selected.get('reason', ''),
-                'disaster_benefit': selected.get('disaster_benefit', '')
+                'reason': selected.get('reason', '')
             }
             
             calculated_services.append(calculated_service)
@@ -639,8 +638,8 @@ class AWSOptimizer:
             
             사용자 수 규모별 가이드:
             - 소규모 (1-1,000명): 기본 사용량
-            - 중규모 (1,000-10,000명): 2-5배 사용량
-            - 대규모 (10,000명 이상): 5-10배 사용량
+            - 중규모 (1,000-10,000명): 2-5배 이상 사용량
+            - 대규모 (10,000명 이상): 5-10배 초과 사용량
             
             응답 형식:
             {{
@@ -740,8 +739,7 @@ class AWSOptimizer:
                             'unit_monthly_cost': unit_cost,
                             'quantity': quantity,
                             'total_monthly_cost': total_service_cost,
-                            'reason': f"{mid_option['reason']} (재해대비)",
-                            'disaster_benefit': '재해상황 대응 강화'
+                            'reason': f"{mid_option['reason']} (재해대비)"
                         })
                         total_cost += total_service_cost
                         print(f"  Added {service['name']} ({mid_option['type']}): ${unit_cost} × {quantity} = ${total_service_cost}")
@@ -758,8 +756,7 @@ class AWSOptimizer:
                         'unit_monthly_cost': cheapest['monthly_cost'],
                         'quantity': 1,
                         'total_monthly_cost': cheapest['monthly_cost'],
-                        'reason': cheapest['reason'],
-                        'disaster_benefit': '기본 서비스 지원'
+                        'reason': cheapest['reason']
                     })
                     total_cost += cheapest['monthly_cost']
                     print(f"  Added {service['name']} ({cheapest['type']}): ${cheapest['monthly_cost']}")
@@ -925,8 +922,7 @@ def process_optimization(request_uuid, service_type, users, performance, additio
                     'unit_cost': service['unit_monthly_cost'],
                     'quantity': service['quantity'],
                     'total_cost': service['total_monthly_cost'],
-                    'reason': service['reason'],
-                    'disaster_benefit': service['disaster_benefit']
+                    'reason': service['reason']
                 })
             
             response_data = {
@@ -955,10 +951,9 @@ def process_optimization(request_uuid, service_type, users, performance, additio
             }
         
         store_request(request_uuid, request_data, response_data, 'completed')
-        
     except Exception as e:
         error_response = {'error': str(e)}
-        request_data = request_data if 'request_data' in locals() else {}
+        request_data = locals().get('request_data', {})
         store_request(request_uuid, request_data, error_response, 'failed')
 
 @app.route('/optimize', methods=['POST'])
