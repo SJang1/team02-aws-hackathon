@@ -300,6 +300,10 @@
         .copy-btn:hover { background: #45a049; }
         .copy-btn.copied { background: #2196F3; }
         
+        .request-summary { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .request-summary h4 { margin-bottom: 1rem; color: #FFD700; }
+        .request-details p { margin: 0.5rem 0; }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
@@ -424,6 +428,27 @@
                 <button type="button" class="submit-btn" onclick="loadAnalysis()">
                     <i class="fas fa-download"></i> 분석 결과 불러오기
                 </button>
+                
+                <div id="uuid-loading" class="loading">
+                    <div class="spinner"></div>
+                    <h3><i class="fas fa-search"></i> 분석 결과를 불러오는 중...</h3>
+                    <p>저장된 분석 결과를 찾고 있습니다.</p>
+                </div>
+                
+                <div id="uuid-result" class="result">
+                    <div id="uuid-result-content"></div>
+                    <div id="uuid-uuid-display" class="uuid-display" style="display: none;">
+                        <div class="uuid-container">
+                            <label>분석 UUID (나중에 불러오기 용):</label>
+                            <div class="uuid-copy-section">
+                                <input type="text" id="uuid-current-uuid" readonly>
+                                <button type="button" class="copy-btn" onclick="copyUuidFromLoad()">
+                                    <i class="fas fa-copy"></i> 복사
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
             
             <!-- 새로운 분석 폼 -->
@@ -848,14 +873,13 @@
                 return;
             }
             
-            // 이미 처리 중인 경우 경고
             if (loadBtn.disabled) {
                 alert('분석 결과를 불러오는 중입니다. 잠시만 기다려주세요.');
                 return;
             }
             
             disableSubmitButton();
-            showLoading();
+            showUuidLoading();
             
             try {
                 const response = await fetch(`/status/${uuid}`);
@@ -863,25 +887,70 @@
                 
                 if (data.status === 'completed' && data.response_data) {
                     currentUuid = uuid;
-                    displayAnalysisResult(data.response_data);
+                    displayUuidResult(data.response_data, data.request_data);
                 } else if (data.status === 'not_found') {
-                    showError('해당 UUID의 분석 결과를 찾을 수 없습니다.');
+                    showUuidError('해당 UUID의 분석 결과를 찾을 수 없습니다.');
                 } else if (data.status === 'processing') {
-                    showError('분석이 아직 진행 중입니다. 잠시 후 다시 시도해주세요.');
+                    showUuidError('분석이 아직 진행 중입니다. 잠시 후 다시 시도해주세요.');
                 } else {
-                    showError('분석 결과를 불러올 수 없습니다.');
+                    showUuidError('분석 결과를 불러올 수 없습니다.');
                 }
             } catch (error) {
-                showError('분석 결과를 불러오는 중 오류가 발생했습니다.');
+                showUuidError('분석 결과를 불러오는 중 오류가 발생했습니다.');
             } finally {
                 enableSubmitButton();
             }
         }
         
-        // 분석 결과 표시 함수
-        function displayAnalysisResult(responseData) {
-            if (responseData.status === 'completed') {
+        // UUID 불러오기 전용 함수들
+        function showUuidLoading() {
+            const loading = document.getElementById('uuid-loading');
+            const result = document.getElementById('uuid-result');
+            
+            result.style.display = 'none';
+            result.classList.remove('show');
+            
+            loading.style.display = 'block';
+            setTimeout(() => loading.classList.add('show'), 50);
+        }
+        
+        function showUuidError(message) {
+            const loading = document.getElementById('uuid-loading');
+            const resultDiv = document.getElementById('uuid-result');
+            
+            loading.classList.remove('show');
+            setTimeout(() => loading.style.display = 'none', 300);
+            
+            resultDiv.className = 'result error';
+            resultDiv.style.display = 'block';
+            document.getElementById('uuid-result-content').innerHTML = `<h3><i class="fas fa-exclamation-triangle"></i> 오류</h3><p>${message}</p>`;
+            
+            setTimeout(() => resultDiv.classList.add('show'), 400);
+        }
+        
+        function displayUuidResult(responseData, requestData) {
+            const loading = document.getElementById('uuid-loading');
+            const resultDiv = document.getElementById('uuid-result');
+            
+            loading.classList.remove('show');
+            setTimeout(() => loading.style.display = 'none', 300);
+            
+            if (responseData.feasible) {
                 let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                
+                if (requestData) {
+                    content += `<div class="request-summary">
+                        <h4><i class="fas fa-file-alt"></i> 요청 내역</h4>
+                        <div class="request-details">
+                            <p><strong>서비스 유형:</strong> ${requestData.service_type}</p>
+                            <p><strong>예상 사용자:</strong> ${requestData.users}</p>
+                            <p><strong>예산:</strong> $${requestData.budget}/월</p>
+                            <p><strong>리전:</strong> ${requestData.region}</p>
+                            ${requestData.additional_info ? `<p><strong>추가 요구사항:</strong> ${requestData.additional_info}</p>` : ''}
+                        </div>
+                    </div>`;
+                }
+                
                 content += generateArchitectureDiagram(responseData.services);
                 content += `<div class="cost-summary">`;
                 content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
@@ -901,16 +970,48 @@
                 }
                 
                 content += `</div>`;
-                showResult(content, true);
+                
+                resultDiv.className = 'result success';
+                resultDiv.style.display = 'block';
+                document.getElementById('uuid-result-content').innerHTML = content;
+                
+                setTimeout(() => {
+                    resultDiv.classList.add('show');
+                    
+                    const serviceStacks = resultDiv.querySelectorAll('.service-stack');
+                    serviceStacks.forEach((stack, index) => {
+                        setTimeout(() => stack.classList.add('show'), index * 150);
+                    });
+                    
+                    const costSummary = resultDiv.querySelector('.cost-summary');
+                    if (costSummary) {
+                        setTimeout(() => costSummary.classList.add('show'), serviceStacks.length * 150 + 200);
+                    }
+                    
+                    if (currentUuid) {
+                        document.getElementById('uuid-current-uuid').value = currentUuid;
+                        document.getElementById('uuid-uuid-display').style.display = 'block';
+                    }
+                }, 400);
             } else {
-                showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>${responseData.message}</p>`, false);
+                showUuidError(responseData.message);
             }
+        }
+        
+        function copyUuidFromLoad() {
+            const uuidInput = document.getElementById('uuid-current-uuid');
+            const copyBtn = document.querySelector('#uuid-uuid-display .copy-btn');
             
-            // UUID 표시
-            if (currentUuid) {
-                document.getElementById('current-uuid').value = currentUuid;
-                document.getElementById('uuid-display').style.display = 'block';
-            }
+            uuidInput.select();
+            document.execCommand('copy');
+            
+            copyBtn.classList.add('copied');
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> 복사됨';
+            
+            setTimeout(() => {
+                copyBtn.classList.remove('copied');
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> 복사';
+            }, 2000);
         }
         
         // 버튼 비활성화 함수
