@@ -120,7 +120,7 @@ terraform apply 실행 시 다음이 자동으로 처리됩니다:
 
 - AWS 인프라 생성 (EC2 등)
 - nginx 설치 및 프록싱 설정
-- git clone을 통해 https://github.com/SJang1/team02-aws-hackathon.git을 clone
+- git clone을 통해 https://github.com/SJang1/team02-aws-hackathon.git 을 clone
 - bash를 통해 시작 프로그램을 실행
 
 ### 정리하기
