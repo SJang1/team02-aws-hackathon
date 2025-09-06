@@ -308,6 +308,16 @@
         .notification.show { transform: translateX(0); }
         .notification i { margin-right: 0.5rem; }
         
+        .guide-section { padding: 4rem 2rem; color: white; }
+        .guide-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 2rem; max-width: 1200px; margin: 0 auto; }
+        .guide-card { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; }
+        .guide-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-5px); border-color: #4CAF50; }
+        .guide-icon { font-size: 3rem; color: #4CAF50; margin-bottom: 1rem; }
+        .guide-card h3 { margin-bottom: 0.5rem; }
+        .guide-card p { margin-bottom: 1rem; opacity: 0.8; }
+        .guide-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+        .tag { background: rgba(76, 175, 80, 0.3); color: #4CAF50; padding: 0.3rem 0.6rem; border-radius: 12px; font-size: 0.8rem; font-weight: bold; }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
@@ -331,6 +341,7 @@
             <ul class="nav-links">
                 <li><a href="#" onclick="showTab('home')" class="nav-link active">홈</a></li>
                 <li><a href="#" onclick="showTab('service')" class="nav-link">서비스</a></li>
+                <li><a href="#" onclick="showTab('guide')" class="nav-link">가이드</a></li>
                 <li><a href="#" onclick="showTab('pricing')" class="nav-link">요금제</a></li>
                 <li><a href="#" onclick="showTab('contact')" class="nav-link">문의</a></li>
             </ul>
@@ -342,6 +353,7 @@
             <ul class="mobile-nav-links">
                 <li><a href="#" onclick="showTab('home'); closeMobileMenu()" class="nav-link active">홈</a></li>
                 <li><a href="#" onclick="showTab('service'); closeMobileMenu()" class="nav-link">서비스</a></li>
+                <li><a href="#" onclick="showTab('guide'); closeMobileMenu()" class="nav-link">가이드</a></li>
                 <li><a href="#" onclick="showTab('pricing'); closeMobileMenu()" class="nav-link">요금제</a></li>
                 <li><a href="#" onclick="showTab('contact'); closeMobileMenu()" class="nav-link">문의</a></li>
             </ul>
@@ -542,6 +554,87 @@
         </div>
     </div>
     
+    <!-- 가이드 탭 -->
+    <div id="guide-tab" class="tab-content">
+        <div class="guide-section">
+            <h2 style="text-align: center; color: white; margin-bottom: 3rem;"><i class="fas fa-book"></i> AWS 인프라 가이드</h2>
+            
+            <div class="guide-grid">
+                <div class="guide-card" onclick="showGuideDetail('web')">
+                    <div class="guide-icon"><i class="fas fa-globe"></i></div>
+                    <h3>웹 애플리케이션</h3>
+                    <p>웹사이트, API 서버, SPA 등</p>
+                    <div class="guide-tags">
+                        <span class="tag">EC2</span>
+                        <span class="tag">ALB</span>
+                        <span class="tag">RDS</span>
+                        <span class="tag">CloudFront</span>
+                    </div>
+                </div>
+                
+                <div class="guide-card" onclick="showGuideDetail('mobile')">
+                    <div class="guide-icon"><i class="fas fa-mobile-alt"></i></div>
+                    <h3>모바일 백엔드</h3>
+                    <p>모바일 앱 API 서버</p>
+                    <div class="guide-tags">
+                        <span class="tag">Lambda</span>
+                        <span class="tag">API Gateway</span>
+                        <span class="tag">DynamoDB</span>
+                        <span class="tag">Cognito</span>
+                    </div>
+                </div>
+                
+                <div class="guide-card" onclick="showGuideDetail('game')">
+                    <div class="guide-icon"><i class="fas fa-gamepad"></i></div>
+                    <h3>인디 게임</h3>
+                    <p>멀티플레이어 게임 서버</p>
+                    <div class="guide-tags">
+                        <span class="tag">GameLift</span>
+                        <span class="tag">ElastiCache</span>
+                        <span class="tag">DynamoDB</span>
+                        <span class="tag">CloudWatch</span>
+                    </div>
+                </div>
+                
+                <div class="guide-card" onclick="showGuideDetail('data')">
+                    <div class="guide-icon"><i class="fas fa-chart-bar"></i></div>
+                    <h3>데이터 분석</h3>
+                    <p>빅데이터 처리 및 분석</p>
+                    <div class="guide-tags">
+                        <span class="tag">S3</span>
+                        <span class="tag">Glue</span>
+                        <span class="tag">Athena</span>
+                        <span class="tag">QuickSight</span>
+                    </div>
+                </div>
+                
+                <div class="guide-card" onclick="showGuideDetail('ml')">
+                    <div class="guide-icon"><i class="fas fa-brain"></i></div>
+                    <h3>AI/ML 서비스</h3>
+                    <p>머신러닝 모델 개발</p>
+                    <div class="guide-tags">
+                        <span class="tag">SageMaker</span>
+                        <span class="tag">Bedrock</span>
+                        <span class="tag">Lambda</span>
+                        <span class="tag">S3</span>
+                    </div>
+                </div>
+                
+                <div class="guide-card" onclick="showGuideDetail('startup')">
+                    <div class="guide-icon"><i class="fas fa-rocket"></i></div>
+                    <h3>스타트업 MVP</h3>
+                    <p>빠른 프로토타입 개발</p>
+                    <div class="guide-tags">
+                        <span class="tag">Amplify</span>
+                        <span class="tag">Lambda</span>
+                        <span class="tag">DynamoDB</span>
+                        <span class="tag">Cognito</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- 요금제 탭 -->
     <div id="pricing-tab" class="tab-content">
         <div class="pricing-section">
@@ -632,6 +725,17 @@
             <p id="serviceModalText"></p>
             <div class="modal-buttons">
                 <button class="modal-btn confirm" onclick="closeServiceModal()">확인</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 가이드 상세 모달 -->
+    <div id="guideModal" class="modal">
+        <div class="modal-content" style="max-width: 800px; text-align: left;">
+            <h3 id="guideModalTitle"></h3>
+            <div id="guideModalContent"></div>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" onclick="closeGuideModal()">닫기</button>
             </div>
         </div>
     </div>
@@ -763,10 +867,13 @@
         window.onclick = function(event) {
             const planModal = document.getElementById('planModal');
             const serviceModal = document.getElementById('serviceModal');
+            const guideModal = document.getElementById('guideModal');
             if (event.target === planModal) {
                 closePlanModal();
             } else if (event.target === serviceModal) {
                 closeServiceModal();
+            } else if (event.target === guideModal) {
+                closeGuideModal();
             }
         }
         
@@ -1551,6 +1658,162 @@
         // 서비스 모달 닫기
         function closeServiceModal() {
             document.getElementById('serviceModal').style.display = 'none';
+        }
+        
+        // 가이드 상세 표시
+        function showGuideDetail(type) {
+            const guides = {
+                'web': {
+                    title: '웹 애플리케이션 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>웹사이트, API 서버, SPA 등을 위한 확장 가능한 인프라 구성</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>CloudFront (CDN)</strong> - 전 세계 빠른 콘텐츠 전송</li>
+                            <li><strong>Application Load Balancer</strong> - 트래픽 분산 및 고가용성</li>
+                            <li><strong>EC2 Auto Scaling</strong> - 자동 서버 확장/축소</li>
+                            <li><strong>RDS Multi-AZ</strong> - 고가용성 데이터베이스</li>
+                            <li><strong>ElastiCache</strong> - 인메모리 캐싱으로 성능 향상</li>
+                        </ul>
+                        
+                        <h4>비용 최적화 팁</h4>
+                        <ul>
+                            <li>Reserved Instance로 EC2 비용 절약 (75%까지)</li>
+                            <li>S3 Intelligent Tiering으로 저장 비용 자동 최적화</li>
+                            <li>CloudWatch로 리소스 모니터링 및 자동 스케일링</li>
+                        </ul>
+                    `
+                },
+                'mobile': {
+                    title: '모바일 백엔드 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>모바일 앱을 위한 서버리스 백엔드 API 구성</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>API Gateway</strong> - RESTful API 관리 및 보안</li>
+                            <li><strong>Lambda</strong> - 서버리스 비즈니스 로직</li>
+                            <li><strong>DynamoDB</strong> - NoSQL 데이터베이스 (밀리초 응답)</li>
+                            <li><strong>Cognito</strong> - 사용자 인증 및 권한 관리</li>
+                            <li><strong>S3</strong> - 파일 저장 및 CDN</li>
+                        </ul>
+                        
+                        <h4>장점</h4>
+                        <ul>
+                            <li>사용한 만큼만 비용 지불 (Pay-as-you-go)</li>
+                            <li>자동 스케일링으로 갑작스러운 트래픽 대응</li>
+                            <li>서버 관리 부담 없음</li>
+                        </ul>
+                    `
+                },
+                'game': {
+                    title: '인디 게임 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>멀티플레이어 게임을 위한 실시간 게임 서버 구성</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>GameLift</strong> - 전용 게임 서버 호스팅</li>
+                            <li><strong>ElastiCache Redis</strong> - 실시간 리더보드 및 세션</li>
+                            <li><strong>DynamoDB</strong> - 게임 데이터 및 사용자 프로필</li>
+                            <li><strong>CloudWatch</strong> - 게임 서버 모니터링</li>
+                            <li><strong>S3</strong> - 게임 에셋 및 업데이트 파일</li>
+                        </ul>
+                        
+                        <h4>성공 사례</h4>
+                        <ul>
+                            <li><strong>데이브 더 다이버</strong> - 100명에서 300만명으로 성장</li>
+                            <li><strong>스컷</strong> - 첫 달 100만 다운로드 달성</li>
+                        </ul>
+                    `
+                },
+                'data': {
+                    title: '데이터 분석 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>빅데이터 수집, 처리, 분석을 위한 데이터 파이프라인</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>S3 Data Lake</strong> - 대용량 데이터 저장소</li>
+                            <li><strong>Glue</strong> - ETL 작업 및 데이터 카탈로그</li>
+                            <li><strong>Athena</strong> - 서버리스 SQL 쿼리 엔진</li>
+                            <li><strong>QuickSight</strong> - 비즈니스 인텔리전스 대시보드</li>
+                            <li><strong>Kinesis</strong> - 실시간 데이터 스트리밍</li>
+                        </ul>
+                        
+                        <h4>비용 효율성</h4>
+                        <ul>
+                            <li>전통 데이터 웨어하우스 대비 70% 비용 절약</li>
+                            <li>사용한 만큼만 비용 지불</li>
+                        </ul>
+                    `
+                },
+                'ml': {
+                    title: 'AI/ML 서비스 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>머신러닝 모델 개발, 훈련, 배포를 위한 종합 플랫폼</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>SageMaker</strong> - 전체 ML 라이프사이클 관리</li>
+                            <li><strong>Bedrock</strong> - 사전 훈련된 기초 모델 API</li>
+                            <li><strong>Lambda</strong> - 모델 추론 API 서비스</li>
+                            <li><strong>S3</strong> - 훈련 데이터 및 모델 저장</li>
+                            <li><strong>EC2 GPU</strong> - 대규모 모델 훈련</li>
+                        </ul>
+                        
+                        <h4>사용 사례</h4>
+                        <ul>
+                            <li>채팅봇 및 가상 비서</li>
+                            <li>이미지/영상 분석</li>
+                            <li>추천 시스템</li>
+                            <li>예측 분석</li>
+                        </ul>
+                    `
+                },
+                'startup': {
+                    title: '스타트업 MVP 인프라',
+                    content: `
+                        <h4>개요</h4>
+                        <p>빠른 프로토타입 개발과 비용 최적화를 위한 경량 인프라</p>
+                        
+                        <h4>추천 아키텍처</h4>
+                        <ul>
+                            <li><strong>Amplify</strong> - 풀스택 웹/모바일 앱 개발</li>
+                            <li><strong>Lambda</strong> - 서버리스 백엔드</li>
+                            <li><strong>DynamoDB</strong> - 빠른 NoSQL 데이터베이스</li>
+                            <li><strong>Cognito</strong> - 사용자 인증</li>
+                            <li><strong>S3</strong> - 정적 파일 호스팅</li>
+                        </ul>
+                        
+                        <h4>MVP 장점</h4>
+                        <ul>
+                            <li>초기 비용 거의 0원 (프리티어 활용)</li>
+                            <li>빠른 개발 및 배포 (1-2주)</li>
+                            <li>자동 스케일링으로 성장 대응</li>
+                            <li>인프라 관리 부담 최소화</li>
+                        </ul>
+                    `
+                }
+            };
+            
+            const guide = guides[type];
+            if (guide) {
+                document.getElementById('guideModalTitle').textContent = guide.title;
+                document.getElementById('guideModalContent').innerHTML = guide.content;
+                document.getElementById('guideModal').style.display = 'block';
+            }
+        }
+        
+        // 가이드 모달 닫기
+        function closeGuideModal() {
+            document.getElementById('guideModal').style.display = 'none';
         }
         
         // 페이지 로드 시 Free 요금제 기본 선택
