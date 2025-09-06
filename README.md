@@ -116,6 +116,17 @@
 - `terraform plan` (테라폼을 계획 합니다.)
 - `terraform apply` (테라폼을 적용합니다.)
 
+#### 2.1 배포 관련
+이 레포지토리를 이용해서 바로 배포 시 예시 terraform.tfvars 설정입니다.
+```
+aws_region    = "us-east-1"
+project_name  = "team02-hackathon"
+instance_type = "t3.2xlarge"
+public_key    = ""  # Leave empty to auto-generate key pair
+environment   = "dev"
+git_repo_url  = "https://github.com/SJang1/team02-aws-hackathon.git"
+```
+
 ### 3. 자동 처리 과정
 
 terraform apply 실행 시 다음이 자동으로 처리됩니다:
