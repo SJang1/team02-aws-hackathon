@@ -97,3 +97,15 @@ Amazon Q Developer로 구현한 어플리케이션의 데모 영상을 입력합
 * **SNS나 커뮤니티에서 화제가 될 가능성**이 있는 **웹 서비스**
 * **빠르게 MVP를 테스트**하고 시장 반응을 봐야 하는 **스타트업**
 * **운영 비용을 최소화**하며 개인 프로젝트를 운영하고 싶은 **개발자**
+
+## 배포 방법
+
+### 배포하기
+- aws cli로 로그인을 합니다.
+- `cd terraform`
+- `terraform init`
+- `terraform apply`
+
+### 정리하기
+- `cd terraform`
+- `terraform destory`
