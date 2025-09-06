@@ -922,26 +922,22 @@ def try_to_squeeze_budget(services, budget, service_type, users, performance, ad
 
 
     응답 형식:
-    {{
-        "services": [
-            {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": number, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1 , .....}},
-            {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": number, "reason": "Auto Scaling 웹서버", "quantity": 2 , .....}}
-
-            필요한 것들(
-            'name': service['name'],
-                'type': service['type'],
-                'unit_cost': service['unit_monthly_cost'],
-                'quantity': service['quantity'],
-                'total_cost': service['total_monthly_cost'],
-                'reason': service['reason']
-            )
-
-
-        ],
-        "total_cost": 150,
-        "disaster_readiness_score": 85,
-        "explanation": "재해상황 대비를 위해 선택한 이유와 예상 효과"
-    }}
+    응답 형식:
+            {{
+                "recalculated_services": [
+                    {{
+                        "name": "AmazonCloudFront",
+                        "type": "standard",
+                        "unit_monthly_cost": 기존_단가,
+                        "quantity": 수량,
+                        "user_based_usage_cost": 사용자_기반_추가_비용,
+                        "total_monthly_cost": 최종_월_비용,
+                        "reason": "사용자 수 기반 비용 계산 근거"
+                    }}
+                ],
+                "total_cost": 전체_비용,
+                "cost_explanation": "사용자 수 {users}에 맞는 비용 계산 설명"
+            }}
     
     
                 
