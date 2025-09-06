@@ -103,10 +103,25 @@
 ## 배포 방법
 
 ### 배포하기
-- aws cli로 로그인을 합니다.
+### 1. 사전 요구 사항
+- AWS CLI 설치 및 구성
+- Terraform 설치 (>= 1.0)
+- 적절한 AWS 권한 (S3, CloudFront 관리 권한)
+
+### 2. 배포 진행
 - `cd terraform` (테라폼 폴더에 진입합니다.)
 - `terraform init` (테라폼을 init 합니다.)
+- `terraform plan` (테라폼을 계획 합니다.)
 - `terraform apply` (테라폼을 적용합니다.)
+
+### 3. 자동 처리 과정
+
+terraform apply 실행 시 다음이 자동으로 처리됩니다:
+
+- AWS 인프라 생성 (EC2 등)
+- nginx 설치 및 프록싱 설정
+- git clone을 통해 https://github.com/SJang1/team02-aws-hackathon.git을 clone
+- bash를 통해 시작 프로그램을 실행
 
 ### 정리하기
 - `cd terraform` (테라폼 폴더에 진입합니다.)
