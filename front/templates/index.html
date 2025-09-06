@@ -172,28 +172,56 @@
             gap: 2rem;
             flex-wrap: wrap;
         }
+        .service-stack {
+            position: relative;
+            display: inline-block;
+            cursor: pointer;
+            opacity: 0;
+            transform: translateY(30px);
+            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
+        }
+        .service-stack.show {
+            opacity: 1;
+            transform: translateY(0);
+        }
+        .service-stack:hover .main-block {
+            background: rgba(255,255,255,0.25);
+            border-color: #4CAF50;
+            transform: translateY(-5px);
+            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        }
         .service-block {
             background: rgba(255,255,255,0.15);
             border: 2px solid rgba(255,255,255,0.3);
             border-radius: 12px;
             padding: 1.5rem;
             text-align: center;
-            cursor: pointer;
             transition: all 0.3s ease;
             min-width: 150px;
-            opacity: 0;
-            transform: translateY(30px);
-            transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
-        .service-block:hover {
-            background: rgba(255,255,255,0.25);
-            border-color: #4CAF50;
-            transform: translateY(-5px);
-            box-shadow: 0 10px 25px rgba(76, 175, 80, 0.3);
+        .main-block {
+            position: relative;
+            z-index: 3;
         }
-        .service-block.show {
-            opacity: 1;
-            transform: translateY(0);
+        .shadow-block {
+            position: absolute;
+            top: 4px;
+            left: 4px;
+            right: -4px;
+            bottom: -4px;
+            background: rgba(255,255,255,0.08);
+            border: 1px solid rgba(255,255,255,0.2);
+            z-index: 2;
+        }
+        .shadow-block-2 {
+            position: absolute;
+            top: 8px;
+            left: 8px;
+            right: -8px;
+            bottom: -8px;
+            background: rgba(255,255,255,0.04);
+            border: 1px solid rgba(255,255,255,0.1);
+            z-index: 1;
         }
         .service-icon {
             font-size: 2rem;
@@ -214,9 +242,21 @@
             color: #FFD700;
         }
         .service-quantity {
-            font-size: 0.8rem;
-            opacity: 0.7;
-            margin-top: 0.3rem;
+            position: absolute;
+            top: -8px;
+            right: -8px;
+            background: #FF5722;
+            color: white;
+            border-radius: 50%;
+            width: 24px;
+            height: 24px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            border: 2px solid white;
+            z-index: 4;
         }
         .connection-arrow {
             font-size: 1.5rem;
@@ -1052,16 +1092,16 @@
             setTimeout(() => {
                 resultDiv.classList.add('show');
                 
-                // 서비스 블록들 순차 애니메이션
-                const serviceBlocks = resultDiv.querySelectorAll('.service-block');
-                serviceBlocks.forEach((block, index) => {
-                    setTimeout(() => block.classList.add('show'), index * 150);
+                // 서비스 스택들 순차 애니메이션
+                const serviceStacks = resultDiv.querySelectorAll('.service-stack');
+                serviceStacks.forEach((stack, index) => {
+                    setTimeout(() => stack.classList.add('show'), index * 150);
                 });
                 
                 // 비용 요약 애니메이션
                 const costSummary = resultDiv.querySelector('.cost-summary');
                 if (costSummary) {
-                    setTimeout(() => costSummary.classList.add('show'), serviceBlocks.length * 150 + 200);
+                    setTimeout(() => costSummary.classList.add('show'), serviceStacks.length * 150 + 200);
                 }
                 
                 // UUID 표시
@@ -1211,19 +1251,20 @@
             const icon = serviceIcons[serviceName] || 'fas fa-cube';
             const totalCost = service.total_monthly_cost || service.total_cost || 0;
             const unitCost = service.unit_monthly_cost || (totalCost / (service.quantity || 1));
-            
-            let blocks = '';
             const quantity = service.quantity || 1;
-            for (let i = 0; i < quantity; i++) {
-                blocks += `
-                    <div class="service-block" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                        <div class="service-icon"><i class="${icon}"></i></div>
+            
+            return `
+                <div class="service-stack" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                    <div class="service-block main-block">
+                        <div class="service-icon"><i class="${icon}"></i></div>
                         <div class="service-name">${serviceName}</div>
                         <div class="service-type">${service.type}</div>
                         <div class="service-cost">$${Math.round(unitCost)}/월</div>
+                        ${quantity > 1 ? `<div class="service-quantity">x${quantity}</div>` : ''}
                     </div>
-                `;
-            }
-            return blocks;
+                    ${quantity > 1 ? '<div class="service-block shadow-block"></div>' : ''}
+                    ${quantity > 2 ? '<div class="service-block shadow-block-2"></div>' : ''}
+                </div>
+            `;
         }
         
         // 서비스 이유 표시 함수
