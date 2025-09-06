@@ -447,7 +447,7 @@ class AWSOptimizer:
         print(f"\n=== Step 2 Complete: {len(priced_services)} services priced ===\n")
         return priced_services
     
-    def step3_budget_disaster_optimization(self, priced_services, budget, service_type='', users='', performance='', additional_info='', region='us-east-1'):
+    def step3_budget_disaster_optimization(self, priced_services, budget, service_type='', users='', performance='', additional_info='', region='us-east-1', request_uuid=None):
         """3단계: 예산 내 재해대비 최적 서비스 조합 추천"""
         try:
             # 서비스 옵션 정보를 AI에게 전달
@@ -537,6 +537,8 @@ class AWSOptimizer:
                 json_str = content[start:end]
             
             optimization = json.loads(json_str)
+
+            update_status(request_uuid, 'step3_complete')
             
             # Step 4: 정확한 가격 계산 및 검증
             selected_services = self.step4_calculate_exact_costs(optimization['disaster_ready_services'], priced_services)
@@ -773,7 +775,7 @@ class AWSOptimizer:
         
         return optimized, total_cost
     
-    def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
+    def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1', request_uuid=None):
         """5단계 재해대비 최적화 프로세스 실행"""
         print(f"\n{'='*60}")
         print(f"Starting 5-Step AWS Architecture Optimization")
@@ -782,15 +784,19 @@ class AWSOptimizer:
         
         # 1단계: 재해상황 대비 필수 서비스 목록 추출
         required_services = self.step1_disaster_ready_services(service_type, users, performance, additional_info, region)
+        update_status(request_uuid, 'step1_complete')
         
         # 2단계: 서비스별 가격 조회
         priced_services = self.step2_get_service_prices(required_services, region)
+        update_status(request_uuid, 'step2_complete')
         
         # 3단계: 예산 내 재해대비 최적 조합 추천 + 4단계: 정확한 비용 계산
-        optimized_services, initial_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region)
-        
+        optimized_services, initial_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region, request_uuid)
+        update_status(request_uuid, 'step4_complete')
+
         # 5단계: 사용자 수 기반 비용 재계산
         final_services, total_cost = self.step5_user_based_cost_calculation(optimized_services, users)
+        update_status(request_uuid, 'step5_complete')
         
         print(f"\n{'='*60}")
         print(f"Optimization Complete!")
@@ -871,6 +877,30 @@ def store_request(request_uuid, request_data, response_data=None, status='pendin
             'status': status,
             'created_at': datetime.utcnow().isoformat()
         }
+
+def update_status(request_uuid, status):
+    try:
+        conn = get_db_connection()
+        if not conn:
+            # 메모리 저장소에서 업데이트
+            if request_uuid in memory_storage:
+                memory_storage[request_uuid]['status'] = status
+            return
+        cursor = conn.cursor()
+        
+        cursor.execute('''
+            UPDATE requests
+            SET status = %s, updated_at = CURRENT_TIMESTAMP
+            WHERE uuid = %s
+        ''', (status, request_uuid))
+        
+        conn.commit()
+        conn.close()
+    except Exception as e:
+        print(f"Database update failed: {e}")
+        # 메모리 저장소에서 업데이트
+        if request_uuid in memory_storage:
+            memory_storage[request_uuid]['status'] = status
 
 def get_request(request_uuid):
     try:
@@ -1015,7 +1045,7 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         store_request(request_uuid, request_data, status='processing')
         
         # 5단계 최적화 프로세스 실행
-        optimized_services, total_cost = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region)
+        optimized_services, total_cost = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region, request_uuid)
         
         # 결과 생성
         feasible = total_cost <= budget
