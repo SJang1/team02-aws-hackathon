@@ -1077,7 +1077,8 @@
                 'compute': [],
                 'database': [],
                 'storage': [],
-                'network': []
+                'network': [],
+                'uncategorized': []
             };
             
             services.forEach(service => {
@@ -1091,9 +1092,9 @@
                 } else if (['S3'].includes(serviceName)) {
                     layers.storage.push(service);
                 } else if (['CloudWatch'].includes(serviceName)) {
-                    layers.network.push(service); // 모니터링은 네트워크 레이어에 배치
+                    layers.network.push(service);
                 } else {
-                    layers.compute.push(service);
+                    layers.uncategorized.push(service);
                 }
             });
             
@@ -1131,6 +1132,16 @@
                     diagram += generateServiceBlock(service);
                 });
                 layers.storage.forEach(service => {
+                    diagram += generateServiceBlock(service);
+                });
+                diagram += '</div>';
+            }
+
+            // Uncategorized 레이어
+            if (layers.uncategorized.length > 0) {
+                diagram += '<div class="layer-label">카테고리 지정이 아직 안된 서비스 (수정예정)</div>';
+                diagram += '<div class="service-layer">';
+                layers.uncategorized.forEach(service => {
                     diagram += generateServiceBlock(service);
                 });
                 diagram += '</div>';
