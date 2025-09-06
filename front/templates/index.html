@@ -994,7 +994,37 @@
                     }
                 }, 400);
             } else {
-                showUuidError(responseData.message);
+                // 예산 부족 상황
+                let content = `<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3>`;
+                content += `<p>${responseData.message || '예산이 부족합니다.'}</p>`;
+                
+                if (responseData.minimum_budget) {
+                    content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                    content += `<h5>예산 정보</h5>`;
+                    content += `<p><strong>요청 예산:</strong> $${responseData.budget}/월</p>`;
+                    content += `<p><strong>최소 필요 예산:</strong> $${responseData.minimum_budget}/월</p>`;
+                    content += `<p><strong>부족 금액:</strong> $${responseData.shortfall}/월</p>`;
+                    content += `</div>`;
+                }
+                
+                // 추천 서비스들도 표시
+                if (responseData.services && responseData.services.length > 0) {
+                    content += '<h4 style="margin-top: 2rem;"><i class="fas fa-list"></i> 추천 서비스 목록</h4>';
+                    content += generateArchitectureDiagram(responseData.services);
+                }
+                
+                resultDiv.className = 'result error';
+                resultDiv.style.display = 'block';
+                document.getElementById('uuid-result-content').innerHTML = content;
+                
+                setTimeout(() => {
+                    resultDiv.classList.add('show');
+                    
+                    const serviceStacks = resultDiv.querySelectorAll('.service-stack');
+                    serviceStacks.forEach((stack, index) => {
+                        setTimeout(() => stack.classList.add('show'), index * 150);
+                    });
+                }, 400);
             }
         }
         
@@ -1229,7 +1259,49 @@
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
-                    displayAnalysisResult(data.response_data);
+                    if (data.response_data.feasible) {
+                        let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                        content += generateArchitectureDiagram(data.response_data.services);
+                        content += `<div class="cost-summary">`;
+                        content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
+                        content += `<p><strong>총 비용: $${data.response_data.total_cost.toFixed(2)}/월</strong></p>`;
+                        content += `<p><strong>예산: $${data.response_data.budget.toFixed(2)}/월</strong></p>`;
+                        content += `<p><strong>예산 활용률: ${data.response_data.budget_utilization.toFixed(1)}%</strong></p>`;
+                        content += `<p style="color: #4CAF50;"><strong>절약 금액: $${data.response_data.savings.toFixed(2)}/월</strong></p>`;
+                        
+                        if (data.response_data.cost_breakdown) {
+                            content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                            content += `<h5>비용 분석</h5>`;
+                            content += `<p>• 컴퓨팅: $${data.response_data.cost_breakdown.compute.toFixed(2)}</p>`;
+                            content += `<p>• 스토리지: $${data.response_data.cost_breakdown.storage.toFixed(2)}</p>`;
+                            content += `<p>• 네트워킹: $${data.response_data.cost_breakdown.networking.toFixed(2)}</p>`;
+                            content += `<p>• 기타: $${data.response_data.cost_breakdown.other.toFixed(2)}</p>`;
+                            content += `</div>`;
+                        }
+                        
+                        content += `</div>`;
+                        showResult(content, true);
+                    } else {
+                        let content = `<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3>`;
+                        content += `<p>${data.response_data.message || '예산이 부족합니다.'}</p>`;
+                        
+                        if (data.response_data.minimum_budget) {
+                            content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                            content += `<h5>예산 정보</h5>`;
+                            content += `<p><strong>요청 예산:</strong> $${data.response_data.budget}/월</p>`;
+                            content += `<p><strong>최소 필요 예산:</strong> $${data.response_data.minimum_budget}/월</p>`;
+                            content += `<p><strong>부족 금액:</strong> $${data.response_data.shortfall}/월</p>`;
+                            content += `</div>`;
+                        }
+                        
+                        // 추천 서비스들도 표시
+                        if (data.response_data.services && data.response_data.services.length > 0) {
+                            content += '<h4 style="margin-top: 2rem;"><i class="fas fa-list"></i> 추천 서비스 목록</h4>';
+                            content += generateArchitectureDiagram(data.response_data.services);
+                        }
+                        
+                        showResult(content, false);
+                    }
                     enableSubmitButton();
                 } else if (data.status === 'failed') {
                     showError('처리 실패');
