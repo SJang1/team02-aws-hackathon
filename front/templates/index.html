@@ -880,7 +880,7 @@
         
         // 분석 결과 표시 함수
         function displayAnalysisResult(responseData) {
-            if (responseData.feasible) {
+            if (responseData.status === 'completed') {
                 let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
                 content += generateArchitectureDiagram(responseData.services);
                 content += `<div class="cost-summary">`;
@@ -1269,7 +1269,7 @@
                         <div class="service-icon"><i class="${icon}"></i></div>
                         <div class="service-name">${serviceName}</div>
                         <div class="service-type">${service.type}</div>
-                        <div class="service-cost">$${Math.round(unitCost)}/월</div>
+                        <div class="service-cost">$${Math.round(totalCost)}/월</div>
                         ${quantity > 1 ? `<div class="service-quantity">x${quantity}</div>` : ''}
                     </div>
                     ${quantity > 1 ? '<div class="service-block shadow-block"></div>' : ''}
