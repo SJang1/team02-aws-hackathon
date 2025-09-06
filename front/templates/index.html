@@ -804,7 +804,31 @@
                 usageLimitTitle: '사용 제한',
                 usageLimitMessage: '무료 요금제는 월 5회까지만 사용 가능합니다.',
                 upgradeMessage: 'Pro 요금제로 업그레이드하시면 무제한 사용할 수 있습니다.',
-                upgradeButton: 'Pro로 업그레이드'
+                upgradeButton: 'Pro로 업그레이드',
+                failurePreventionTitle: '실패 방지',
+                failurePreventionDesc: '바이럴 성공 시점에 발생하는 치명적인 서버 다운을 선제적으로 방지',
+                autoScalingTitle: '자동 확장',
+                autoScalingDesc: 'Auto Scaling과 Load Balancing이 포함된 확장 가능한 아키텍처 자동 설계',
+                aiExpertTitle: 'AI 전문가',
+                aiExpertDesc: '전문 DevOps 인력의 역할을 수행하여 비싼 전문성 격차 해소',
+                benefitsTitle: 'ClOps 사용의 이점',
+                costSavingTitle: '비용 절약',
+                costSavingDesc: 'IaC 학습 비용 절약',
+                downtimePreventionTitle: '다운타임 방지',
+                downtimePreventionDesc: '서버 다운 손실 예방',
+                roiTitle: 'ROI',
+                roiDesc: '연간 투자 수익률',
+                serviceTitle: 'AWS 서비스 추천',
+                newAnalysisTitle: '새로운 분석',
+                newAnalysisDesc: '새로운 AWS 서비스 분석을 시작합니다',
+                loadAnalysisTitle: '기존 분석 불러오기',
+                loadAnalysisDesc: 'UUID로 이전 분석 결과를 불러옵니다',
+                serviceTypeLabel: '서비스 유형:',
+                expectedUsersLabel: '예상 사용자 수:',
+                regionLabel: 'AWS 리전:',
+                additionalInfoLabel: '추가 요구사항:',
+                budgetLabel: '최대 월 예산 (USD) "!!중요!!":',
+                submitButton: 'AWS 서비스 추천 받기'
             },
             en: {
                 title: 'ClOps - AWS Service Recommendation Platform',
@@ -814,12 +838,37 @@
                 usageLimitTitle: 'Usage Limit',
                 usageLimitMessage: 'Free plan is limited to 5 analyses per month.',
                 upgradeMessage: 'Upgrade to Pro plan for unlimited usage.',
-                upgradeButton: 'Upgrade to Pro'
+                upgradeButton: 'Upgrade to Pro',
+                failurePreventionTitle: 'Failure Prevention',
+                failurePreventionDesc: 'Proactively prevent critical server downtime during viral success moments',
+                autoScalingTitle: 'Auto Scaling',
+                autoScalingDesc: 'Automatically design scalable architecture with Auto Scaling and Load Balancing',
+                aiExpertTitle: 'AI Expert',
+                aiExpertDesc: 'Bridge expensive expertise gaps by performing professional DevOps roles',
+                benefitsTitle: 'Benefits of Using ClOps',
+                costSavingTitle: 'Cost Savings',
+                costSavingDesc: 'IaC learning cost savings',
+                downtimePreventionTitle: 'Downtime Prevention',
+                downtimePreventionDesc: 'Server downtime loss prevention',
+                roiTitle: 'ROI',
+                roiDesc: 'Annual return on investment',
+                serviceTitle: 'AWS Service Recommendation',
+                newAnalysisTitle: 'New Analysis',
+                newAnalysisDesc: 'Start a new AWS service analysis',
+                loadAnalysisTitle: 'Load Existing Analysis',
+                loadAnalysisDesc: 'Load previous analysis results with UUID',
+                serviceTypeLabel: 'Service Type:',
+                expectedUsersLabel: 'Expected Users:',
+                regionLabel: 'AWS Region:',
+                additionalInfoLabel: 'Additional Requirements:',
+                budgetLabel: 'Maximum Monthly Budget (USD) "!!Important!!":',
+                submitButton: 'Get AWS Service Recommendations'
             }
         };
         
         function setLanguage(lang) {
             currentLanguage = lang;
+            const t = translations[lang];
             
             // 언어 버튼 상태 변경
             document.querySelectorAll('.lang-btn').forEach(btn => btn.classList.remove('active'));
@@ -832,16 +881,92 @@
             });
             
             // 페이지 제목 변경
-            document.title = translations[lang].title;
+            document.title = t.title;
             
             // 히어로 섹션 변경
             const heroTitle = document.querySelector('.hero h1');
             const heroSubtitle = document.querySelector('.hero p');
             const heroDescription = document.querySelector('.hero-subtitle p');
             
-            if (heroTitle) heroTitle.innerHTML = `<i class="fas fa-magic"></i> ${translations[lang].heroTitle}`;
-            if (heroSubtitle) heroSubtitle.textContent = translations[lang].heroSubtitle;
-            if (heroDescription) heroDescription.textContent = translations[lang].heroDescription;
+            if (heroTitle) heroTitle.innerHTML = `<i class="fas fa-magic"></i> ${t.heroTitle}`;
+            if (heroSubtitle) heroSubtitle.textContent = t.heroSubtitle;
+            if (heroDescription) heroDescription.textContent = t.heroDescription;
+            
+            // Features 섹션
+            const features = document.querySelectorAll('.feature');
+            if (features[0]) {
+                features[0].querySelector('h3').textContent = t.failurePreventionTitle;
+                features[0].querySelector('p').textContent = t.failurePreventionDesc;
+            }
+            if (features[1]) {
+                features[1].querySelector('h3').textContent = t.autoScalingTitle;
+                features[1].querySelector('p').textContent = t.autoScalingDesc;
+            }
+            if (features[2]) {
+                features[2].querySelector('h3').textContent = t.aiExpertTitle;
+                features[2].querySelector('p').textContent = t.aiExpertDesc;
+            }
+            
+            // Benefits 섹션
+            const benefitsTitle = document.querySelector('.benefits-section h2');
+            if (benefitsTitle) benefitsTitle.innerHTML = `<i class="fas fa-trophy"></i> ${t.benefitsTitle}`;
+            
+            const benefitCards = document.querySelectorAll('.benefit-card');
+            if (benefitCards[0]) {
+                benefitCards[0].querySelector('h3').textContent = t.costSavingTitle;
+                benefitCards[0].querySelector('p:last-child').textContent = t.costSavingDesc;
+            }
+            if (benefitCards[1]) {
+                benefitCards[1].querySelector('h3').textContent = t.downtimePreventionTitle;
+                benefitCards[1].querySelector('p:last-child').textContent = t.downtimePreventionDesc;
+            }
+            if (benefitCards[2]) {
+                benefitCards[2].querySelector('h3').textContent = t.roiTitle;
+                benefitCards[2].querySelector('p:last-child').textContent = t.roiDesc;
+            }
+            
+            // Service 섹션
+            const serviceTitle = document.querySelector('.service-header h2');
+            if (serviceTitle) serviceTitle.innerHTML = `<i class="fas fa-cogs"></i> ${t.serviceTitle}`;
+            
+            const optionCards = document.querySelectorAll('.option-card');
+            if (optionCards[0]) {
+                optionCards[0].querySelector('h3').textContent = t.newAnalysisTitle;
+                optionCards[0].querySelector('p').textContent = t.newAnalysisDesc;
+            }
+            if (optionCards[1]) {
+                optionCards[1].querySelector('h3').textContent = t.loadAnalysisTitle;
+                optionCards[1].querySelector('p').textContent = t.loadAnalysisDesc;
+            }
+            
+            // Form labels
+            const labels = {
+                'serviceType': t.serviceTypeLabel,
+                'expectedUsers': t.expectedUsersLabel,
+                'region': t.regionLabel,
+                'additionalInfo': t.additionalInfoLabel,
+                'budget': t.budgetLabel
+            };
+            
+            Object.keys(labels).forEach(id => {
+                const label = document.querySelector(`label[for="${id}"]`);
+                if (label) label.textContent = labels[id];
+            });
+            
+            // Submit button
+            const submitBtn = document.querySelector('#estimateForm .submit-btn');
+            if (submitBtn && !submitBtn.disabled) {
+                submitBtn.innerHTML = `<i class="fas fa-magic"></i> ${t.submitButton}`;
+            }
+            
+            // Disabled overlay
+            const disabledTitle = document.getElementById('disabled-title');
+            const disabledMessage = document.getElementById('disabled-message');
+            const upgradeBtn = document.getElementById('upgrade-btn');
+            
+            if (disabledTitle) disabledTitle.textContent = t.usageLimitTitle;
+            if (disabledMessage) disabledMessage.innerHTML = `${t.usageLimitMessage}<br>${t.upgradeMessage}`;
+            if (upgradeBtn) upgradeBtn.textContent = t.upgradeButton;
         }
         
         // 사용량 제한 관리
