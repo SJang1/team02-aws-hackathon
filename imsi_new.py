@@ -944,24 +944,48 @@ def try_to_squeeze_budget(services, budget, service_type, users, performance, ad
 
             
     """
-
-
     body = json.dumps({
-        "messages": [{
-        "role": "user", 
-        "content": [{"text": bedrock_prompt}]
-        }],
-        "inferenceConfig": {
-        "max_new_tokens": 32768,
-        "temperature": 0.12
-    }})
-
+                "messages": [{
+                    "role": "user", 
+                    "content": [{"text": bedrock_prompt}]
+                }],
+                "inferenceConfig": {
+                    "max_new_tokens": 32768,
+                    "temperature": 0.12
+                }
+            })
+            
     response = bedrock.invoke_model(
-       modelId="us.amazon.nova-premier-v1:0",
+        modelId="us.amazon.nova-premier-v1:0",
         body=body,
         contentType="application/json"
     )
-
+            
+    result = json.loads(response['body'].read())
+    content = result['output']['message']['content'][0]['text']
+            
+            # ```json 블록에서 JSON 추출
+    if '```json' in content:
+        start = content.find('```json') + 7
+        end = content.find('```', start)
+        json_str = content[start:end].strip()
+    else:
+        start = content.find('{')
+        end = content.rfind('}') + 1
+        json_str = content[start:end]
+            
+        recalculation = json.loads(json_str)
+        recalculated_services = recalculation['recalculated_services']
+        total_cost = recalculation['total_cost']
+            
+        print("\n=== Step 6: squeeze ===")
+        print(f"Expected Users: {users}")
+        print(f"Cost Explanation: {recalculation.get('cost_explanation', '')}")
+            
+        print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
+        print("=== Step 6 Complete ===\n")
+            
+        return recalculated_services, total_cost
     result = json.loads(response['body'].read())
     content = result['output']['message']['content'][0]['text']
             
