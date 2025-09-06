@@ -203,20 +203,26 @@ class AWSOptimizer:
         }
         
         if service not in service_configs:
-            return self.fallback_costs.get(service, {}).get(instance_type, 50)
+            response = pricing_client.get_products(
+                ServiceCode=service,
+                Filters=[
+                    {'Type': 'TERM_MATCH', 'Field': 'location', 'Value': location_map.get(region, 'US East (N. Virginia)')}
+                ]
+            )
+        else:
+            config = service_configs[service]
+            filters = config['filters'].copy()
+            filters.append({
+                'Type': 'TERM_MATCH', 
+                'Field': 'location', 
+                'Value': location_map.get(region, 'US East (N. Virginia)')
+            })
         
-        config = service_configs[service]
-        filters = config['filters'].copy()
-        filters.append({
-            'Type': 'TERM_MATCH', 
-            'Field': 'location', 
-            'Value': location_map.get(region, 'US East (N. Virginia)')
-        })
-        
-        response = pricing_client.get_products(
-            ServiceCode=config['ServiceCode'],
-            Filters=filters
-        )
+            response = pricing_client.get_products(
+                ServiceCode=config['ServiceCode'],
+                Filters=filters
+            )
+
         
         if response['PriceList']:
             price_data = json.loads(response['PriceList'][0])
