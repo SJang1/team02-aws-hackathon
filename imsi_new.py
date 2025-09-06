@@ -975,43 +975,17 @@ def try_to_squeeze_budget(services, budget, service_type, users, performance, ad
         end = res.rfind('}') + 1
         json_str = res[start:end]
         
-        recalculation = json.loads(json_str)
-        recalculated_services = recalculation['recalculated_services']
-        total_cost = recalculation['total_cost']
-            
-        print("\n=== Step 6: squeeze ===")
-        print(f"Expected Users: {users}")
-        print(f"Cost Explanation: {recalculation.get('cost_explanation', '')}")
-            
-        print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
-        print("=== Step 6 Complete ===\n")
-            
-        return recalculated_services, total_cost
-    result = json.loads(response['body'].read())
-    content = result['output']['message']['content'][0]['text']
-            
-            # ```json 블록에서 JSON 추출
-    if '```json' in content:
-        start = content.find('```json') + 7
-        end = content.find('```', start)
-        json_str = content[start:end].strip()
-    else:
-        start = content.find('{')
-        end = content.rfind('}') + 1
-        json_str = content[start:end]
-            
     recalculation = json.loads(json_str)
-    recalculated_services = recalculation['services']
+    recalculated_services = recalculation['recalculated_services']
     total_cost = recalculation['total_cost']
             
-    print("\n=== Step 6: Squeezing Recalculation ===")
+    print("\n=== Step 6: squeeze ===")
     print(f"Expected Users: {users}")
     print(f"Cost Explanation: {recalculation.get('cost_explanation', '')}")
             
-    for service in recalculated_services:
-        usage_cost = service.get('user_based_usage_cost', 0)
-        print(f"  {service['name']}: Base ${service['unit_monthly_cost']}/월 + Usage ${usage_cost}/월 = ${service['total_monthly_cost']}/월")
-            
+    print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
+    print("=== Step 6 Complete ===\n")
+                        
     print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
     print("=== Step 6 Complete ===\n")
             
