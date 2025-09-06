@@ -304,6 +304,10 @@
         .request-summary h4 { margin-bottom: 1rem; color: #FFD700; }
         .request-details p { margin: 0.5rem 0; }
         
+        .notification { position: fixed; top: 20px; right: 20px; background: #4CAF50; color: white; padding: 1rem 1.5rem; border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.3); z-index: 3000; transform: translateX(400px); transition: transform 0.3s ease; }
+        .notification.show { transform: translateX(0); }
+        .notification i { margin-right: 0.5rem; }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
@@ -483,21 +487,7 @@
                             <input type="text" id="customExpectedUsers" class="custom-input" placeholder="사용자 수를 직접 입력하세요">
                         </div>
                         
-                        <div class="form-group">
-                            <label for="resourceAllocation">사용자당 리소스 할당:</label>
-                            <select id="resourceAllocation" required>
-                                <option value="권장 자동 할당" selected>권장 자동 할당 (AI 추천)</option>
-                                <option value="사용자 지정">사용자 직접 설정</option>
-                            </select>
-                            <div id="customResourceConfig" class="custom-input">
-                                <label for="cpuPerUser">CPU (GHz/사용자):</label>
-                                <input type="number" id="cpuPerUser" step="0.1" min="0.1" placeholder="1.0">
-                                <label for="memoryPerUser">메모리 (GB/사용자):</label>
-                                <input type="number" id="memoryPerUser" step="0.1" min="0.1" placeholder="1.0">
-                                <label for="storagePerUser">스토리지 (GB/사용자):</label>
-                                <input type="number" id="storagePerUser" step="1" min="1" placeholder="10">
-                            </div>
-                        </div>
+
                         
                         <div class="form-group">
                             <label for="region">AWS 리전:</label>
@@ -644,6 +634,12 @@
                 <button class="modal-btn confirm" onclick="closeServiceModal()">확인</button>
             </div>
         </div>
+    </div>
+    
+    <!-- 알림 -->
+    <div id="notification" class="notification">
+        <i class="fas fa-check-circle"></i>
+        <span id="notification-text">분석이 완료되었습니다!</span>
     </div>
 
     <script>
@@ -801,21 +797,7 @@
         toggleCustomInput('expectedUsers', 'customExpectedUsers');
         toggleCustomInput('region', 'customRegion');
         
-        // 리소스 할당 옵션 처리
-        document.getElementById('resourceAllocation').addEventListener('change', function() {
-            const customConfig = document.getElementById('customResourceConfig');
-            if (this.value === '사용자 지정') {
-                customConfig.classList.add('show');
-                document.getElementById('cpuPerUser').required = true;
-                document.getElementById('memoryPerUser').required = true;
-                document.getElementById('storagePerUser').required = true;
-            } else {
-                customConfig.classList.remove('show');
-                document.getElementById('cpuPerUser').required = false;
-                document.getElementById('memoryPerUser').required = false;
-                document.getElementById('storagePerUser').required = false;
-            }
-        });
+
         
         // 서비스 옵션 선택
         function selectServiceOption(option) {
@@ -1099,19 +1081,6 @@
             const expectedUsers = document.getElementById('expectedUsers').value === '기타' ? 
                 document.getElementById('customExpectedUsers').value : document.getElementById('expectedUsers').value;
             
-            const resourceAllocation = document.getElementById('resourceAllocation').value;
-            let resourceConfig = {};
-            if (resourceAllocation === '사용자 지정') {
-                resourceConfig = {
-                    type: 'custom',
-                    cpuPerUser: parseFloat(document.getElementById('cpuPerUser').value),
-                    memoryPerUser: parseFloat(document.getElementById('memoryPerUser').value),
-                    storagePerUser: parseInt(document.getElementById('storagePerUser').value)
-                };
-            } else {
-                resourceConfig = { type: 'auto' };
-            }
-            
             const region = document.getElementById('region').value === '기타' ? 
                 document.getElementById('customRegion').value : document.getElementById('region').value;
             const additionalInfo = document.getElementById('additionalInfo').value;
@@ -1128,7 +1097,6 @@
                     body: JSON.stringify({ 
                         service_type: serviceType,
                         users: expectedUsers,
-                        resource_config: resourceConfig,
                         additional_info: additionalInfo || '',
                         budget: parseInt(budget),
                         region: region 
@@ -1248,6 +1216,28 @@
             enableSubmitButton();
         }
         
+        function showNotification(message, isSuccess = true) {
+            const notification = document.getElementById('notification');
+            const notificationText = document.getElementById('notification-text');
+            const icon = notification.querySelector('i');
+            
+            notificationText.textContent = message;
+            
+            if (isSuccess) {
+                notification.style.background = '#4CAF50';
+                icon.className = 'fas fa-check-circle';
+            } else {
+                notification.style.background = '#f44336';
+                icon.className = 'fas fa-exclamation-triangle';
+            }
+            
+            notification.classList.add('show');
+            
+            setTimeout(() => {
+                notification.classList.remove('show');
+            }, 4000);
+        }
+        
         async function pollResult(uuid) {
             if (!uuid || uuid === 'undefined') {
                 showError('잘못된 UUID입니다.');
@@ -1281,6 +1271,7 @@
                         
                         content += `</div>`;
                         showResult(content, true);
+                        showNotification('분석이 완료되었습니다!');
                     } else {
                         let content = `<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3>`;
                         content += `<p>${data.response_data.message || '예산이 부족합니다.'}</p>`;
@@ -1301,6 +1292,7 @@
                         }
                         
                         showResult(content, false);
+                        showNotification('예산이 부족합니다.', false);
                     }
                     enableSubmitButton();
                 } else if (data.status === 'failed') {
@@ -1361,16 +1353,14 @@
             
             services.forEach(service => {
                 const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
-                if (['CloudFront', 'ALB', 'WAF'].includes(serviceName)) {
+                if (['CloudFront', 'ALB', 'WAF', 'Route53'].includes(serviceName)) {
                     layers.network.push(service);
                 } else if (['EC2', 'Lambda', 'SageMaker'].includes(serviceName)) {
                     layers.compute.push(service);
-                } else if (['RDS', 'DynamoDB', 'ElastiCache'].includes(serviceName)) {
+                } else if (['RDS', 'DynamoDB', 'ElastiCache', 'CloudWatch'].includes(serviceName)) {
                     layers.database.push(service);
                 } else if (['S3'].includes(serviceName)) {
                     layers.storage.push(service);
-                } else if (['CloudWatch'].includes(serviceName)) {
-                    layers.network.push(service);
                 } else {
                     layers.uncategorized.push(service);
                 }
