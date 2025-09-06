@@ -148,35 +148,6 @@
             transform: translateY(30px);
             transition: all 0.5s cubic-bezier(0.25, 0.1, 0.25, 1);
         }
-        .console-log {
-            background: #1a1a1a;
-            border: 1px solid #333;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-top: 1rem;
-            max-height: 300px;
-            overflow-y: auto;
-            font-family: 'Courier New', monospace;
-            font-size: 0.85rem;
-            color: #00ff00;
-            text-align: left;
-        }
-        .console-log .log-entry {
-            margin-bottom: 0.5rem;
-            padding: 0.2rem 0;
-            border-bottom: 1px solid #333;
-        }
-        .console-log .log-timestamp {
-            color: #888;
-            margin-right: 0.5rem;
-        }
-        .console-log .log-level {
-            font-weight: bold;
-            margin-right: 0.5rem;
-        }
-        .console-log .log-level.info { color: #00ff00; }
-        .console-log .log-level.warn { color: #ffff00; }
-        .console-log .log-level.error { color: #ff0000; }
         .loading.show {
             opacity: 1;
             transform: translateY(0);
@@ -1251,7 +1222,6 @@
                     <div class="spinner"></div>
                     <h3><i class="fas fa-robot"></i> AI가 분석 중입니다...</h3>
                     <p id="loading-tip">최적의 AWS 서비스 구성을 찾고 있습니다. 잠시만 기다려주세요.</p>
-                    <div id="console-log" class="console-log"></div>
                 </div>
                 
                 <div id="result" class="result">
@@ -2740,37 +2710,9 @@
             loading.style.display = 'block';
             setTimeout(() => loading.classList.add('show'), 50);
             
-            // 콘솔 로그 초기화
-            initConsoleLog();
-            
             // 팁 로테이션 시작
             showRandomTip();
             tipInterval = setInterval(showRandomTip, 3000);
-        }
-        
-        function initConsoleLog() {
-            const consoleDiv = document.getElementById('console-log');
-            if (consoleDiv) {
-                consoleDiv.innerHTML = '';
-                addLogEntry('시스템 초기화 중...', 'info');
-            }
-        }
-        
-        function addLogEntry(message, level = 'info') {
-            const consoleDiv = document.getElementById('console-log');
-            if (!consoleDiv) return;
-            
-            const timestamp = new Date().toLocaleTimeString();
-            const logEntry = document.createElement('div');
-            logEntry.className = 'log-entry';
-            logEntry.innerHTML = `
-                <span class="log-timestamp">[${timestamp}]</span>
-                <span class="log-level ${level}">[${level.toUpperCase()}]</span>
-                <span class="log-message">${message}</span>
-            `;
-            
-            consoleDiv.appendChild(logEntry);
-            consoleDiv.scrollTop = consoleDiv.scrollHeight;
         }
         
         function showResult(content, isSuccess = true) {
@@ -2853,13 +2795,6 @@
                 const response = await fetch(`/status/${uuid}`);
                 const data = await response.json();
                 
-                // 로그 업데이트
-                if (data.logs && data.logs.length > 0) {
-                    data.logs.forEach(log => {
-                        addLogEntry(log.message, log.level || 'info');
-                    });
-                }
-                
                 if (data.status === 'completed') {
                     if (data.response_data.feasible) {
                         let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
@@ -2923,17 +2858,6 @@
                     showError('처리 실패');
                     enableSubmitButton();
                 } else {
-                    // 진행 상황에 따른 로그 메시지 추가
-                    if (data.status === 'processing') {
-                        const messages = [
-                            'Traffic & Resource Agent 실행 중...',
-                            'Architecture Agent 분석 중...',
-                            'AWS Service Agent 매핑 중...',
-                            'Cost Agent 비용 계산 중...'
-                        ];
-                        const randomMessage = messages[Math.floor(Math.random() * messages.length)];
-                        addLogEntry(randomMessage, 'info');
-                    }
                     setTimeout(() => pollResult(uuid), 2000);
                 }
             } catch (error) {
