@@ -801,12 +801,20 @@
         // 기존 분석 불러오기
         async function loadAnalysis() {
             const uuid = document.getElementById('analysisUuid').value.trim();
+            const loadBtn = document.querySelector('#uuid-form .submit-btn');
             
             if (!uuid) {
                 alert('UUID를 입력해주세요.');
                 return;
             }
             
+            // 이미 처리 중인 경우 경고
+            if (loadBtn.disabled) {
+                alert('분석 결과를 불러오는 중입니다. 잠시만 기다려주세요.');
+                return;
+            }
+            
+            disableSubmitButton();
             showLoading();
             
             try {
@@ -825,6 +833,8 @@
                 }
             } catch (error) {
                 showError('분석 결과를 불러오는 중 오류가 발생했습니다.');
+            } finally {
+                enableSubmitButton();
             }
         }
         
@@ -863,9 +873,55 @@
             }
         }
         
+        // 버튼 비활성화 함수
+        function disableSubmitButton() {
+            const submitBtn = document.querySelector('#estimateForm .submit-btn');
+            const loadBtn = document.querySelector('#uuid-form .submit-btn');
+            
+            if (submitBtn) {
+                submitBtn.disabled = true;
+                submitBtn.style.opacity = '0.6';
+                submitBtn.style.cursor = 'not-allowed';
+                submitBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> 분석 중...';
+            }
+            
+            if (loadBtn) {
+                loadBtn.disabled = true;
+                loadBtn.style.opacity = '0.6';
+                loadBtn.style.cursor = 'not-allowed';
+            }
+        }
+        
+        // 버튼 활성화 함수
+        function enableSubmitButton() {
+            const submitBtn = document.querySelector('#estimateForm .submit-btn');
+            const loadBtn = document.querySelector('#uuid-form .submit-btn');
+            
+            if (submitBtn) {
+                submitBtn.disabled = false;
+                submitBtn.style.opacity = '1';
+                submitBtn.style.cursor = 'pointer';
+                submitBtn.innerHTML = '<i class="fas fa-magic"></i> AWS 서비스 추천 받기';
+            }
+            
+            if (loadBtn) {
+                loadBtn.disabled = false;
+                loadBtn.style.opacity = '1';
+                loadBtn.style.cursor = 'pointer';
+            }
+        }
+        
         // 서비스 폼 제출
         document.getElementById('estimateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            
+            const submitBtn = document.querySelector('#estimateForm .submit-btn');
+            
+            // 이미 처리 중인 경우 경고
+            if (submitBtn.disabled) {
+                alert('분석이 진행 중입니다. 잠시만 기다려주세요.');
+                return;
+            }
             
             const serviceType = document.getElementById('serviceType').value === '기타' ? 
                 document.getElementById('customServiceType').value : document.getElementById('serviceType').value;
@@ -890,6 +946,8 @@
             const additionalInfo = document.getElementById('additionalInfo').value;
             const budget = document.getElementById('budget').value;
             
+            // 버튼 비활성화
+            disableSubmitButton();
             showLoading();
             
             try {
@@ -910,12 +968,14 @@
                 
                 if (data.error) {
                     showError(`오류: ${data.error}`);
+                    enableSubmitButton();
                     return;
                 }
                 
                 const uuid = data.uuid;
                 if (!uuid) {
                     showError('UUID를 받지 못했습니다.');
+                    enableSubmitButton();
                     return;
                 }
                 
@@ -923,6 +983,7 @@
                 pollResult(uuid);
             } catch (error) {
                 showError('오류가 발생했습니다.');
+                enableSubmitButton();
             }
         });
         
@@ -1013,6 +1074,7 @@
         
         function showError(message) {
             showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 오류</h3><p>${message}</p>`, false);
+            enableSubmitButton();
         }
         
         async function pollResult(uuid) {
@@ -1027,13 +1089,16 @@
                 
                 if (data.status === 'completed') {
                     displayAnalysisResult(data.response_data);
+                    enableSubmitButton();
                 } else if (data.status === 'failed') {
                     showError('처리 실패');
+                    enableSubmitButton();
                 } else {
                     setTimeout(() => pollResult(uuid), 2000);
                 }
             } catch (error) {
                 showError('폴링 오류');
+                enableSubmitButton();
             }
         }
         
