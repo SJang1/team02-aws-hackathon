@@ -213,6 +213,11 @@
             font-size: 0.85rem;
             color: #FFD700;
         }
+        .service-quantity {
+            font-size: 0.8rem;
+            opacity: 0.7;
+            margin-top: 0.3rem;
+        }
         .connection-arrow {
             font-size: 1.5rem;
             color: rgba(255,255,255,0.6);
@@ -508,6 +513,17 @@
             </div>
         </div>
     </div>
+    
+    <!-- 서비스 정보 모달 -->
+    <div id="serviceModal" class="modal">
+        <div class="modal-content">
+            <h3 id="serviceModalTitle"></h3>
+            <p id="serviceModalText"></p>
+            <div class="modal-buttons">
+                <button class="modal-btn confirm" onclick="closeServiceModal()">확인</button>
+            </div>
+        </div>
+    </div>
 
     <script>
         // 랜덤 팁 배열
@@ -574,9 +590,12 @@
         
         // 모달 외부 클릭 시 닫기
         window.onclick = function(event) {
-            const modal = document.getElementById('planModal');
-            if (event.target === modal) {
+            const planModal = document.getElementById('planModal');
+            const serviceModal = document.getElementById('serviceModal');
+            if (event.target === planModal) {
                 closePlanModal();
+            } else if (event.target === serviceModal) {
+                closeServiceModal();
             }
         }
         
@@ -811,7 +830,7 @@
                 // 비용 요약 애니메이션
                 const costSummary = resultDiv.querySelector('.cost-summary');
                 if (costSummary) {
-                    setTimeout(() => costSummary.classList.add('show'), serviceItems.length * 100 + 200);
+                    setTimeout(() => costSummary.classList.add('show'), serviceBlocks.length * 150 + 200);
                 }
             }, 400);
         }
@@ -835,13 +854,27 @@
                         let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
                         content += generateArchitectureDiagram(data.response_data.services);
                         content += `<div class="cost-summary">`;
-                        content += `<h4>비용 요약</h4>`;
-                        content += `<p><strong>총 비용: $${data.response_data.total_cost}/월</strong></p>`;
-                        content += `<p>예산 내 절약: $${data.response_data.savings}</p>`;
+                        content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
+                        content += `<p><strong>총 비용: $${data.response_data.total_cost.toFixed(2)}/월</strong></p>`;
+                        content += `<p><strong>예산: $${data.response_data.budget.toFixed(2)}/월</strong></p>`;
+                        content += `<p><strong>예산 활용률: ${data.response_data.budget_utilization.toFixed(1)}%</strong></p>`;
+                        content += `<p style="color: #4CAF50;"><strong>절약 금액: $${data.response_data.savings.toFixed(2)}/월</strong></p>`;
+                        
+                        // 비용 분석 추가
+                        if (data.response_data.cost_breakdown) {
+                            content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                            content += `<h5>비용 분석</h5>`;
+                            content += `<p>• 컴퓨팅: $${data.response_data.cost_breakdown.compute.toFixed(2)}</p>`;
+                            content += `<p>• 스토리지: $${data.response_data.cost_breakdown.storage.toFixed(2)}</p>`;
+                            content += `<p>• 네트워킹: $${data.response_data.cost_breakdown.networking.toFixed(2)}</p>`;
+                            content += `<p>• 기타: $${data.response_data.cost_breakdown.other.toFixed(2)}</p>`;
+                            content += `</div>`;
+                        }
+                        
                         content += `</div>`;
                         showResult(content, true);
                     } else {
-                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>예산을 초과했습니다.</p>`, false);
+                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>예산을 초과했습니다. 예산을 늘리거나 요구사항을 조정해주세요.</p>`, false);
                     }
                 } else if (data.status === 'failed') {
                     showError('처리 실패');
@@ -864,7 +897,9 @@
             'SageMaker': 'https://aws.amazon.com/sagemaker/',
             'DynamoDB': 'https://aws.amazon.com/dynamodb/',
             'ElastiCache': 'https://aws.amazon.com/elasticache/',
-            'VPC': 'https://aws.amazon.com/vpc/'
+            'VPC': 'https://aws.amazon.com/vpc/',
+            'WAF': 'https://aws.amazon.com/waf/',
+            'CloudWatch': 'https://aws.amazon.com/cloudwatch/'
         };
         
         // 서비스 아이콘 매핑
@@ -878,7 +913,9 @@
             'SageMaker': 'fas fa-brain',
             'DynamoDB': 'fas fa-table',
             'ElastiCache': 'fas fa-memory',
-            'VPC': 'fas fa-network-wired'
+            'VPC': 'fas fa-network-wired',
+            'WAF': 'fas fa-shield-alt',
+            'CloudWatch': 'fas fa-chart-line'
         };
         
         // 아키텍처 다이어그램 생성 함수
@@ -894,7 +931,7 @@
             
             services.forEach(service => {
                 const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
-                if (['CloudFront', 'ALB'].includes(serviceName)) {
+                if (['CloudFront', 'ALB', 'WAF'].includes(serviceName)) {
                     layers.network.push(service);
                 } else if (['EC2', 'Lambda', 'SageMaker'].includes(serviceName)) {
                     layers.compute.push(service);
@@ -902,6 +939,8 @@
                     layers.database.push(service);
                 } else if (['S3'].includes(serviceName)) {
                     layers.storage.push(service);
+                } else if (['CloudWatch'].includes(serviceName)) {
+                    layers.network.push(service); // 모니터링은 네트워크 레이어에 배치
                 } else {
                     layers.compute.push(service);
                 }
@@ -957,13 +996,25 @@
             const link = awsServiceLinks[serviceName] || '#';
             
             return `
-                <div class="service-block" onclick="window.open('${link}', '_blank')">
-                    <div class="service-icon"><i class="${icon}"></i></div>
+                <div class="service-block" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                    <div class="service-icon"><i class="${icon}"></i></div>
                     <div class="service-name">${serviceName}</div>
                     <div class="service-type">${service.type}</div>
-                    <div class="service-cost">$${service.monthly_cost}/월</div>
+                    <div class="service-cost">$${service.total_cost.toFixed(2)}/월</div>
+                    <div class="service-quantity">수량: ${service.quantity}</div>
                 </div>
             `;
+        }
+        
+        // 서비스 이유 표시 함수
+        function showServiceReason(serviceName, reason) {
+            document.getElementById('serviceModalTitle').textContent = serviceName + ' 서비스';
+            document.getElementById('serviceModalText').textContent = '추천 이유: ' + reason;
+            document.getElementById('serviceModal').style.display = 'block';
+        }
+        
+        // 서비스 모달 닫기
+        function closeServiceModal() {
+            document.getElementById('serviceModal').style.display = 'none';
         }
         
         // 페이지 로드 시 Free 요금제 기본 선택
