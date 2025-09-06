@@ -893,6 +893,112 @@ def get_request(request_uuid):
             return memory_storage[request_uuid]
         return {'status': 'error', 'message': 'Database error'}
 
+
+def try_to_squeeze_budget(services, budget, service_type, users, performance, additional_info, region):
+    """예산 초과 시, 예산 내로 맞추기 위한 재최적화 시도"""
+    print("\n=== Attempting to Squeeze Budget ===")
+    
+    # AI 활용하여 예산 안으로 맞추기 시도.
+    # 혹시 가능하다면, 서비스 수량 조정, 더 저렴한 옵션 선택 등.
+    
+    bedrock_prompt = f"""
+    현재 AWS 서비스 구성과 비용이 예산 ${budget}/월을 초과했습니다.
+    다음은 현재 선택된 서비스들입니다:
+    {json.dumps(services, ensure_ascii=False, indent=2)}
+
+
+    예산 내에서 다음 재해상황에 최적으로 대응할 수 있는 서비스 조합을 다시 추천해주세요.
+    다만 재해상황보다 !!""사용자가 원하는 서비스 운영이 우선임을 감안""!!하세요.
+
+    반드시 필요할 것으로 보이는 중요 서비스 (예: EC2 등)을 우선시하고, 필요없을거같은 서비스에서 크기를 줄이는 등 비용 절감을 시도해 주세요.
+    더이상 불가할 것 같으면, 최대한 예산에 맞추되 너무 과하게 서비스를 제거하지 마십시요.
+
+    AWS 아키텍처 설계 요청:
+    - 서비스 유형: {service_type}
+    - 예상 사용자 수: {users}
+    - 성능 요구사항: {performance}
+    - 추가 정보: {additional_info}
+    - 리전: {region}
+
+
+    응답 형식:
+    {{
+        "services": [
+            {{"name": "AmazonCloudFront", "type": "standard", "monthly_cost": number, "reason": "CDN으로 트래픽 분산, DDoS 보호", "quantity": 1 , .....}},
+            {{"name": "AmazonEC2", "type": "t3.medium", "monthly_cost": number, "reason": "Auto Scaling 웹서버", "quantity": 2 , .....}}
+
+            필요한 것들(
+            'name': service['name'],
+                'type': service['type'],
+                'unit_cost': service['unit_monthly_cost'],
+                'quantity': service['quantity'],
+                'total_cost': service['total_monthly_cost'],
+                'reason': service['reason']
+            )
+
+
+        ],
+        "total_cost": 150,
+        "disaster_readiness_score": 85,
+        "explanation": "재해상황 대비를 위해 선택한 이유와 예상 효과"
+    }}
+    
+    
+                
+
+            
+    """
+
+
+    body = json.dumps({
+        "messages": [{
+        "role": "user", 
+        "content": [{"text": bedrock_prompt}]
+        }],
+        "inferenceConfig": {
+        "max_new_tokens": 32768,
+        "temperature": 0.12
+    }})
+
+    response = bedrock.invoke_model(
+       modelId="us.amazon.nova-premier-v1:0",
+        body=body,
+        contentType="application/json"
+    )
+
+    result = json.loads(response['body'].read())
+    content = result['output']['message']['content'][0]['text']
+            
+            # ```json 블록에서 JSON 추출
+    if '```json' in content:
+        start = content.find('```json') + 7
+        end = content.find('```', start)
+        json_str = content[start:end].strip()
+    else:
+        start = content.find('{')
+        end = content.rfind('}') + 1
+        json_str = content[start:end]
+            
+    recalculation = json.loads(json_str)
+    recalculated_services = recalculation['services']
+    total_cost = recalculation['total_cost']
+            
+    print("\n=== Step 6: Squeezing Recalculation ===")
+    print(f"Expected Users: {users}")
+    print(f"Cost Explanation: {recalculation.get('cost_explanation', '')}")
+            
+    for service in recalculated_services:
+        usage_cost = service.get('user_based_usage_cost', 0)
+        print(f"  {service['name']}: Base ${service['unit_monthly_cost']}/월 + Usage ${usage_cost}/월 = ${service['total_monthly_cost']}/월")
+            
+    print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
+    print("=== Step 6 Complete ===\n")
+            
+    return recalculated_services, total_cost
+
+
+
+
 def process_optimization(request_uuid, service_type, users, performance, additional_info, budget, region):
     try:
         request_data = {
@@ -911,6 +1017,10 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         
         # 결과 생성
         feasible = total_cost <= budget
+
+        if not feasible:
+            print(f"Warning: Total cost ${total_cost:.2f} exceeds budget ${budget:.2f}")
+            optimized_services, total_cost = try_to_squeeze_budget(optimized_services, budget, service_type, users, performance, additional_info, region)
         
             # 서비스별 상세 비용 정보 포함
         services_summary = []
