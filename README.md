@@ -77,13 +77,12 @@
     * **Cost Agent:** 최종 구성안에 대한 상세한 월별 예상 비용을 산출합니다.
 3.  **결과 리포트 확인 (Output):** 사용자는 최종적으로 추천 아키텍처 다이어그램, 구성 가이드, 상세 비용 분석이 담긴 종합 리포트를 받아볼 수 있습니다.
 
-<img width="1725" height="889" alt="image" src="https://github.com/user-attachments/assets/1b12fdf1-18f5-4482-a468-d940aeb944a3" />
-
+![api](./documents/dia.png)
 
 ## 동영상 데모
 ### 죄송합니다. GIF 업로드 시도 시 용량 초과 (10MB 제한)으로 인하여 전체 업로드를 하지 못하였습니다.
 ### 입력 부분만 GIF 업로드 하고, 결과 나오는 등 풀영상은 슬랙으로 별도로 공유드리겠습니다.
-![output](https://github.com/user-attachments/assets/e4f2b95e-e417-43b5-94cd-de3718a438a8)
+![output](./documents/486356273-e4f2b95e-e417-43b5-94cd-de3718a438a8.gif)
 
 
 ## 리소스 배포하기
