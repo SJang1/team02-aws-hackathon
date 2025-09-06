@@ -912,43 +912,33 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         # 결과 생성
         feasible = total_cost <= budget
         
-        if feasible:
             # 서비스별 상세 비용 정보 포함
-            services_summary = []
-            for service in optimized_services:
-                services_summary.append({
-                    'name': service['name'],
-                    'type': service['type'],
-                    'unit_cost': service['unit_monthly_cost'],
-                    'quantity': service['quantity'],
-                    'total_cost': service['total_monthly_cost'],
-                    'reason': service['reason']
-                })
-            
-            response_data = {
-                'feasible': True,
-                'services': services_summary,
-                'total_cost': round(total_cost, 2),
-                'budget': budget,
-                'savings': round(budget - total_cost, 2),
-                'budget_utilization': round((total_cost/budget)*100, 1) if budget > 0 else 0,
-                'region': region,
-                'cost_breakdown': {
-                    'compute': sum(s['total_monthly_cost'] for s in optimized_services if ('EC2' in s['name'] or 'Lambda' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
-                    'storage': sum(s['total_monthly_cost'] for s in optimized_services if ('S3' in s['name'] or 'RDS' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
-                    'networking': sum(s['total_monthly_cost'] for s in optimized_services if ('CloudFront' in s['name'] or 'LoadBalancing' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
-                    'other': sum(s['total_monthly_cost'] for s in optimized_services if not any(x in s['name'] for x in ['EC2', 'Lambda', 'S3', 'RDS', 'CloudFront', 'LoadBalancing']) and isinstance(s['total_monthly_cost'], (int, float)))
-                }
+        services_summary = []
+        for service in optimized_services:
+            services_summary.append({
+                'name': service['name'],
+                'type': service['type'],
+                'unit_cost': service['unit_monthly_cost'],
+                'quantity': service['quantity'],
+                'total_cost': service['total_monthly_cost'],
+                'reason': service['reason']
+            })
+        
+        response_data = {
+            'feasible': feasible,
+            'services': services_summary,
+            'total_cost': round(total_cost, 2),
+            'budget': budget,
+            'savings': round(budget - total_cost, 2),
+            'budget_utilization': round((total_cost/budget)*100, 1) if budget > 0 else 0,
+            'region': region,
+            'cost_breakdown': {
+                'compute': sum(s['total_monthly_cost'] for s in optimized_services if ('EC2' in s['name'] or 'Lambda' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                'storage': sum(s['total_monthly_cost'] for s in optimized_services if ('S3' in s['name'] or 'RDS' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                'networking': sum(s['total_monthly_cost'] for s in optimized_services if ('CloudFront' in s['name'] or 'LoadBalancing' in s['name']) and isinstance(s['total_monthly_cost'], (int, float))),
+                'other': sum(s['total_monthly_cost'] for s in optimized_services if not any(x in s['name'] for x in ['EC2', 'Lambda', 'S3', 'RDS', 'CloudFront', 'LoadBalancing']) and isinstance(s['total_monthly_cost'], (int, float)))
             }
-        else:
-            response_data = {
-                'feasible': False,
-                'message': f'예산 ${budget}로는 요구사항을 충족할 수 없습니다. 최소 ${total_cost:.2f}가 필요합니다.',
-                'minimum_budget': round(total_cost, 2),
-                'budget': budget,
-                'shortfall': round(total_cost - budget, 2),
-                'region': region
-            }
+        }
         
         store_request(request_uuid, request_data, response_data, 'completed')
     except Exception as e:
