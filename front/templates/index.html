@@ -647,8 +647,8 @@
                     <ul class="plan-features">
                         <li><i class="fas fa-check"></i> 기본 요금제 예측</li>
                         <li><i class="fas fa-check"></i> AI 기반 서비스 추천</li>
-                        <li><i class="fas fa-check"></i> 월 5회 분석</li>
-                        <li class="unavailable"><i class="fas fa-times"></i> 사용량 측정 보고서</li>
+                        <li><i class="fas fa-check"></i> 월 5회 분석 제한</li>
+                        <li class="unavailable"><i class="fas fa-times"></i> 기존 분석 불러오기</li>
                         <li class="unavailable"><i class="fas fa-times"></i> 우선 지원</li>
                     </ul>
                 </div>
@@ -659,9 +659,9 @@
                     <div class="plan-price">$29<span style="font-size: 1rem;">/월</span></div>
                     <ul class="plan-features">
                         <li><i class="fas fa-check"></i> 모든 Free 기능</li>
-                        <li><i class="fas fa-check"></i> 사용량 측정 및 분석</li>
-                        <li><i class="fas fa-check"></i> 상세 보고서 제작</li>
-                        <li><i class="fas fa-check"></i> 월 50회 분석</li>
+                        <li><i class="fas fa-check"></i> 무제한 분석</li>
+                        <li><i class="fas fa-check"></i> 기존 분석 불러오기</li>
+                        <li><i class="fas fa-check"></i> UUID 기반 결과 저장</li>
                         <li><i class="fas fa-check"></i> 우선 지원</li>
                     </ul>
                 </div>
@@ -768,6 +768,27 @@
         let selectedPlan = null;
         let currentUuid = null;
         let currentServiceOption = 'new';
+        
+        // 사용량 제한 관리
+        function getUsageCount() {
+            const count = localStorage.getItem('analysisCount');
+            return count ? parseInt(count) : 0;
+        }
+        
+        function incrementUsageCount() {
+            const count = getUsageCount() + 1;
+            localStorage.setItem('analysisCount', count.toString());
+            return count;
+        }
+        
+        function checkUsageLimit() {
+            if (currentPlan === 'pro') return true;
+            return getUsageCount() < 5;
+        }
+        
+        function showUsageLimitModal() {
+            alert('무료 요금제는 월 5회까지만 사용 가능합니다.\nPro 요금제로 업그레이드하시면 무제한 사용할 수 있습니다.');
+        }
         
         // 요금제 선택 함수
         function selectPlan(planType, planName, planPrice) {
@@ -960,6 +981,12 @@
         
         // 서비스 옵션 선택
         function selectServiceOption(option) {
+            // Free 사용자의 기존 분석 불러오기 차단
+            if (option === 'load' && currentPlan === 'free') {
+                alert('Free 요금제에서는 기존 분석 불러오기를 사용할 수 없습니다.\nPro 요금제로 업그레이드하시면 모든 기능을 사용할 수 있습니다.');
+                return;
+            }
+            
             currentServiceOption = option;
             
             // 옵션 카드 활성화 상태 변경
@@ -1256,6 +1283,15 @@
                 alert('분석이 진행 중입니다. 잠시만 기다려주세요.');
                 return;
             }
+            
+            // 사용량 제한 체크
+            if (!checkUsageLimit()) {
+                showUsageLimitModal();
+                return;
+            }
+            
+            // 사용량 카운트 증가
+            incrementUsageCount();
             
             const serviceType = document.getElementById('serviceType').value === '기타' ? 
                 document.getElementById('customServiceType').value : document.getElementById('serviceType').value;
