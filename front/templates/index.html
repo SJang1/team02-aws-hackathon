@@ -2802,18 +2802,23 @@
                 if (data.status === 'step1_complete') {
                     let content = `<h3><i class="fas fa-spinner fa-spin"></i> 아키텍처 설계 중...</h3>`;
                     showResult(content, true);
+                    setTimeout(() => pollResult(uuid), 2000);
                 } else if (data.status === 'step2_complete') {
                     let content = `<h3><i class="fas fa-spinner fa-spin"></i> 비용 확인 중...</h3>`;
                     showResult(content, true);
+                    setTimeout(() => pollResult(uuid), 2000);
                 } else if (data.status === 'step3_complete') {
                     let content = `<h3><i class="fas fa-spinner fa-spin"></i> 비용 최적화 중...</h3>`;
                     showResult(content, true);
+                    setTimeout(() => pollResult(uuid), 2000);
                 } else if (data.status === 'step4_complete') {
                     let content = `<h3><i class="fas fa-spinner fa-spin"></i> 정확한 가격 산정 중...</h3>`;
                     showResult(content, true);
+                    setTimeout(() => pollResult(uuid), 2000);
                 } else if (data.status === 'step5_complete') {
                     let content = `<h3><i class="fas fa-spinner fa-spin"></i> 비용 최적화 중...</h3>`;
                     showResult(content, true);
+                    setTimeout(() => pollResult(uuid), 2000);
                 } else if (data.status === 'completed') {
                     if (data.response_data.feasible) {
                         let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
