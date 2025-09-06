@@ -993,15 +993,17 @@
         function generateServiceBlock(service) {
             const serviceName = service.name.replace('Amazon', '').replace('AWS', '');
             const icon = serviceIcons[serviceName] || 'fas fa-cube';
-            const unitCost = service.total_cost / service.quantity;
+            const totalCost = service.total_monthly_cost || service.total_cost || 0;
+            const unitCost = service.unit_monthly_cost || (totalCost / (service.quantity || 1));
             
             let blocks = '';
-            for (let i = 0; i < service.quantity; i++) {
+            const quantity = service.quantity || 1;
+            for (let i = 0; i < quantity; i++) {
                 blocks += `
                     <div class="service-block" onclick="showServiceReason('${serviceName}', '${service.reason.replace(/'/g, "\\'")}')">                        <div class="service-icon"><i class="${icon}"></i></div>
                         <div class="service-name">${serviceName}</div>
                         <div class="service-type">${service.type}</div>
-                        <div class="service-cost">$${unitCost}/월</div>
+                        <div class="service-cost">$${Math.round(unitCost)}/월</div>
                     </div>
                 `;
             }

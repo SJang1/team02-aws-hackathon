@@ -604,6 +604,115 @@ class AWSOptimizer:
         
         return calculated_services
     
+    def step5_user_based_cost_calculation(self, calculated_services, users):
+        """5단계: 예상 사용자 수에 맞는 Unit당 Cost 기반 Monthly Cost 재계산"""
+        try:
+            # AI에게 사용자 수 기반 비용 재계산 요청
+            services_info = []
+            for service in calculated_services:
+                services_info.append(calculated_services)
+            
+            bedrock_prompt = f"""
+            지금 이 AWS 서비스와 비용에 대한 내용을 보고, total_cost 부분이 최종 Monthly Cost가 아닌 Unit당 Cost로 보이는 부분들에 대해서 - 예상 사용자 수: {users} 에 맞도록 추정치를 계산해서 해당 Unit 당 Cost를 Monthly Cost 계산해서 total cost를 고쳐줘
+            
+            현재 서비스 구성:
+            {json.dumps(services_info, ensure_ascii=False, indent=2)}
+            
+            예상 사용자 수: {users}
+            
+            다음 기준으로 사용자 수에 맞는 비용을 재계산해주세요:
+            
+            1. 트래픽 기반 서비스 (CloudFront, WAF, Load Balancer):
+               - 사용자 수에 따른 데이터 전송량, 요청 수 고려
+               - 월간 예상 트래픽 = 사용자 수 × 평균 예측 사용량
+            
+            2. 컴퓨팅 리소스 (EC2, Lambda):
+               - 사용자 수에 따른 CPU/메모리 사용량 고려
+               - 동시 접속자 수 기반 인스턴스 스케일링
+            
+            3. 스토리지 서비스 (S3, RDS):
+               - 사용자 수에 따른 데이터 저장량 증가
+               - 백업 및 로그 저장 공간 고려
+            
+            4. 기타 서비스:
+               - 사용자 수에 비례하는 사용량 패턴 적용
+            
+            사용자 수 규모별 가이드:
+            - 소규모 (1-1,000명): 기본 사용량
+            - 중규모 (1,000-10,000명): 2-5배 사용량
+            - 대규모 (10,000명 이상): 5-10배 사용량
+            
+            응답 형식:
+            {{
+                "recalculated_services": [
+                    {{
+                        "name": "AmazonCloudFront",
+                        "type": "standard",
+                        "unit_monthly_cost": 기존_단가,
+                        "quantity": 수량,
+                        "user_based_usage_cost": 사용자_기반_추가_비용,
+                        "total_monthly_cost": 최종_월_비용,
+                        "reason": "사용자 수 기반 비용 계산 근거"
+                    }}
+                ],
+                "total_cost": 전체_비용,
+                "cost_explanation": "사용자 수 {users}에 맞는 비용 계산 설명"
+            }}
+            """
+            
+            body = json.dumps({
+                "messages": [{
+                    "role": "user", 
+                    "content": [{"text": bedrock_prompt}]
+                }],
+                "inferenceConfig": {
+                    "max_new_tokens": 32768,
+                    "temperature": 0.12
+                }
+            })
+            
+            response = bedrock.invoke_model(
+                modelId="us.amazon.nova-premier-v1:0",
+                body=body,
+                contentType="application/json"
+            )
+            
+            result = json.loads(response['body'].read())
+            content = result['output']['message']['content'][0]['text']
+            
+            # ```json 블록에서 JSON 추출
+            if '```json' in content:
+                start = content.find('```json') + 7
+                end = content.find('```', start)
+                json_str = content[start:end].strip()
+            else:
+                start = content.find('{')
+                end = content.rfind('}') + 1
+                json_str = content[start:end]
+            
+            recalculation = json.loads(json_str)
+            recalculated_services = recalculation['recalculated_services']
+            total_cost = recalculation['total_cost']
+            
+            print("\n=== Step 5: User-Based Cost Recalculation ===")
+            print(f"Expected Users: {users}")
+            print(f"Cost Explanation: {recalculation.get('cost_explanation', '')}")
+            
+            for service in recalculated_services:
+                usage_cost = service.get('user_based_usage_cost', 0)
+                print(f"  {service['name']}: Base ${service['unit_monthly_cost']}/월 + Usage ${usage_cost}/월 = ${service['total_monthly_cost']}/월")
+            
+            print(f"\n  Recalculated Total Cost: ${total_cost:.2f}/월")
+            print("=== Step 5 Complete ===\n")
+            
+            return recalculated_services, total_cost
+            
+        except Exception as e:
+            print(f"Step 5 user-based cost calculation failed: {e}")
+            # 폴백: 기존 비용 그대로 반환
+            total_cost = sum(service['total_monthly_cost'] for service in calculated_services if isinstance(service['total_monthly_cost'], (int, float)))
+            return calculated_services, total_cost
+    
     def _fallback_disaster_optimization(self, priced_services, budget):
         """기본 재해대비 최적화 로직"""
         optimized = []
@@ -661,9 +770,9 @@ class AWSOptimizer:
         return optimized, total_cost
     
     def analyze_requirements(self, service_type, users, performance, additional_info, budget, region='us-east-1'):
-        """4단계 재해대비 최적화 프로세스 실행"""
+        """5단계 재해대비 최적화 프로세스 실행"""
         print(f"\n{'='*60}")
-        print(f"Starting 4-Step AWS Architecture Optimization")
+        print(f"Starting 5-Step AWS Architecture Optimization")
         print(f"Budget: ${budget}/month | Region: {region}")
         print(f"{'='*60}")
         
@@ -674,16 +783,20 @@ class AWSOptimizer:
         priced_services = self.step2_get_service_prices(required_services, region)
         
         # 3단계: 예산 내 재해대비 최적 조합 추천 + 4단계: 정확한 비용 계산
-        optimized_services, total_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region)
+        optimized_services, initial_cost = self.step3_budget_disaster_optimization(priced_services, budget, service_type, users, performance, additional_info, region)
+        
+        # 5단계: 사용자 수 기반 비용 재계산
+        final_services, total_cost = self.step5_user_based_cost_calculation(optimized_services, users)
         
         print(f"\n{'='*60}")
         print(f"Optimization Complete!")
-        print(f"Selected {len(optimized_services)} services")
-        print(f"Total Cost: ${total_cost:.2f}/month")
+        print(f"Selected {len(final_services)} services")
+        print(f"Initial Cost: ${initial_cost:.2f}/month")
+        print(f"User-Adjusted Cost: ${total_cost:.2f}/month")
         print(f"Budget Utilization: {((total_cost/budget)*100) if budget > 0 else 0:.1f}%")
         print(f"{'='*60}\n")
         
-        return optimized_services, total_cost
+        return final_services, total_cost
     
     def _fallback_disaster_services(self, service_type):
         """AI 실패 시 기본 재해대비 서비스 목록"""
@@ -796,7 +909,7 @@ def process_optimization(request_uuid, service_type, users, performance, additio
         
         store_request(request_uuid, request_data, status='processing')
         
-        # 3단계 최적화 프로세스 실행
+        # 5단계 최적화 프로세스 실행
         optimized_services, total_cost = optimizer.analyze_requirements(service_type, users, performance, additional_info, budget, region)
         
         # 결과 생성
