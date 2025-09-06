@@ -300,6 +300,10 @@
         .copy-btn:hover { background: #45a049; }
         .copy-btn.copied { background: #2196F3; }
         
+        .request-summary { background: rgba(255,255,255,0.1); padding: 1rem; border-radius: 8px; margin-bottom: 2rem; }
+        .request-summary h4 { margin-bottom: 1rem; color: #FFD700; }
+        .request-details p { margin: 0.5rem 0; }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
@@ -863,7 +867,7 @@
                 
                 if (data.status === 'completed' && data.response_data) {
                     currentUuid = uuid;
-                    displayAnalysisResult(data.response_data);
+                    displayAnalysisResult(data.response_data, data.request_data);
                 } else if (data.status === 'not_found') {
                     showError('해당 UUID의 분석 결과를 찾을 수 없습니다.');
                 } else if (data.status === 'processing') {
@@ -879,9 +883,15 @@
         }
         
         // 분석 결과 표시 함수
-        function displayAnalysisResult(responseData) {
+        function displayAnalysisResult(responseData, requestData = null) {
             if (responseData.feasible) {
                 let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                
+                // 요청 내역 표시 (기존 분석 불러오기인 경우)
+                if (requestData) {
+                    content += generateRequestSummary(requestData);
+                }
+                
                 content += generateArchitectureDiagram(responseData.services);
                 content += `<div class="cost-summary">`;
                 content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
@@ -1173,6 +1183,22 @@
             'WAF': 'fas fa-shield-alt',
             'CloudWatch': 'fas fa-chart-line'
         };
+        
+        // 요청 내역 요약 생성 함수
+        function generateRequestSummary(requestData) {
+            return `
+                <div class="request-summary">
+                    <h4><i class="fas fa-file-alt"></i> 요청 내역</h4>
+                    <div class="request-details">
+                        <p><strong>서비스 유형:</strong> ${requestData.service_type}</p>
+                        <p><strong>예상 사용자:</strong> ${requestData.users}</p>
+                        <p><strong>예산:</strong> $${requestData.budget}/월</p>
+                        <p><strong>리전:</strong> ${requestData.region}</p>
+                        ${requestData.additional_info ? `<p><strong>추가 요구사항:</strong> ${requestData.additional_info}</p>` : ''}
+                    </div>
+                </div>
+            `;
+        }
         
         // 아키텍처 다이어그램 생성 함수
         function generateArchitectureDiagram(services) {
