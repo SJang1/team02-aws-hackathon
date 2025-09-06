@@ -244,6 +244,22 @@
         .spinner { border: 4px solid rgba(255,255,255,0.3); border-top: 4px solid white; border-radius: 50%; width: 50px; height: 50px; animation: spin 1s linear infinite; margin: 0 auto 1rem; }
         @keyframes spin { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         
+        .service-options { display: grid; grid-template-columns: 1fr 1fr; gap: 2rem; margin-bottom: 2rem; }
+        .option-card { background: rgba(255,255,255,0.1); padding: 2rem; border-radius: 16px; text-align: center; cursor: pointer; transition: all 0.3s ease; border: 2px solid transparent; }
+        .option-card:hover { background: rgba(255,255,255,0.2); transform: translateY(-5px); }
+        .option-card.active { border-color: #4CAF50; background: rgba(76, 175, 80, 0.2); }
+        .option-card i { font-size: 3rem; color: #4CAF50; margin-bottom: 1rem; }
+        .option-card h3 { color: white; margin-bottom: 0.5rem; }
+        .option-card p { color: rgba(255,255,255,0.8); font-size: 0.9rem; }
+        
+        .uuid-display { margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px; }
+        .uuid-container label { display: block; margin-bottom: 0.5rem; font-weight: bold; }
+        .uuid-copy-section { display: flex; gap: 0.5rem; }
+        .uuid-copy-section input { flex: 1; padding: 0.5rem; border: 1px solid rgba(255,255,255,0.3); border-radius: 4px; background: rgba(255,255,255,0.1); color: white; }
+        .copy-btn { padding: 0.5rem 1rem; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; transition: background 0.3s; }
+        .copy-btn:hover { background: #45a049; }
+        .copy-btn.copied { background: #2196F3; }
+        
         @media (max-width: 768px) {
             .form-grid { grid-template-columns: 1fr; }
             .hero h1 { font-size: 2rem; }
@@ -251,10 +267,12 @@
             .mobile-menu-btn { display: block; }
             .pricing-grid { grid-template-columns: 1fr; }
             .benefits-grid { grid-template-columns: 1fr; }
+            .service-options { grid-template-columns: 1fr; }
             .nav-container { padding: 0 1rem; }
             .hero { padding: 2rem 1rem; }
             .container { padding: 1rem; }
             .card { padding: 2rem 1rem; }
+            .uuid-copy-section { flex-direction: column; }
         }
     </style>
 </head>
@@ -342,7 +360,34 @@
         </div>
         
         <div class="container">
-            <div class="card">
+            <!-- 서비스 선택 옵션 -->
+            <div class="service-options">
+                <div class="option-card active" onclick="selectServiceOption('new')">
+                    <i class="fas fa-plus-circle"></i>
+                    <h3>새로운 분석</h3>
+                    <p>새로운 AWS 서비스 분석을 시작합니다</p>
+                </div>
+                <div class="option-card" onclick="selectServiceOption('load')">
+                    <i class="fas fa-history"></i>
+                    <h3>기존 분석 불러오기</h3>
+                    <p>UUID로 이전 분석 결과를 불러옵니다</p>
+                </div>
+            </div>
+            
+            <!-- UUID 입력 폼 -->
+            <div id="uuid-form" class="card" style="display: none;">
+                <h3><i class="fas fa-search"></i> 분석 결과 불러오기</h3>
+                <div class="form-group">
+                    <label for="analysisUuid">분석 UUID:</label>
+                    <input type="text" id="analysisUuid" placeholder="분석 UUID를 입력하세요" required>
+                </div>
+                <button type="button" class="submit-btn" onclick="loadAnalysis()">
+                    <i class="fas fa-download"></i> 분석 결과 불러오기
+                </button>
+            </div>
+            
+            <!-- 새로운 분석 폼 -->
+            <div id="new-analysis-form" class="card">
                 <form id="estimateForm">
                     <div class="form-grid">
                         <div class="form-group">
@@ -426,6 +471,17 @@
                 
                 <div id="result" class="result">
                     <div id="result-content"></div>
+                    <div id="uuid-display" class="uuid-display" style="display: none;">
+                        <div class="uuid-container">
+                            <label>분석 UUID (나중에 불러오기 용):</label>
+                            <div class="uuid-copy-section">
+                                <input type="text" id="current-uuid" readonly>
+                                <button type="button" class="copy-btn" onclick="copyUuid()">
+                                    <i class="fas fa-copy"></i> 복사
+                                </button>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -545,6 +601,8 @@
         let tipInterval;
         let currentPlan = 'free';
         let selectedPlan = null;
+        let currentUuid = null;
+        let currentServiceOption = 'new';
         
         // 요금제 선택 함수
         function selectPlan(planType, planName, planPrice) {
@@ -694,6 +752,117 @@
             }
         });
         
+        // 서비스 옵션 선택
+        function selectServiceOption(option) {
+            currentServiceOption = option;
+            
+            // 옵션 카드 활성화 상태 변경
+            document.querySelectorAll('.option-card').forEach(card => {
+                card.classList.remove('active');
+            });
+            event.target.closest('.option-card').classList.add('active');
+            
+            // 폼 표시/숨김
+            const uuidForm = document.getElementById('uuid-form');
+            const newAnalysisForm = document.getElementById('new-analysis-form');
+            const result = document.getElementById('result');
+            
+            if (option === 'load') {
+                uuidForm.style.display = 'block';
+                newAnalysisForm.style.display = 'none';
+                result.style.display = 'none';
+                result.classList.remove('show');
+            } else {
+                uuidForm.style.display = 'none';
+                newAnalysisForm.style.display = 'block';
+                result.style.display = 'none';
+                result.classList.remove('show');
+            }
+        }
+        
+        // UUID 복사 기능
+        function copyUuid() {
+            const uuidInput = document.getElementById('current-uuid');
+            const copyBtn = document.querySelector('.copy-btn');
+            
+            uuidInput.select();
+            document.execCommand('copy');
+            
+            // 버튼 상태 변경
+            copyBtn.classList.add('copied');
+            copyBtn.innerHTML = '<i class="fas fa-check"></i> 복사됨';
+            
+            setTimeout(() => {
+                copyBtn.classList.remove('copied');
+                copyBtn.innerHTML = '<i class="fas fa-copy"></i> 복사';
+            }, 2000);
+        }
+        
+        // 기존 분석 불러오기
+        async function loadAnalysis() {
+            const uuid = document.getElementById('analysisUuid').value.trim();
+            
+            if (!uuid) {
+                alert('UUID를 입력해주세요.');
+                return;
+            }
+            
+            showLoading();
+            
+            try {
+                const response = await fetch(`/status/${uuid}`);
+                const data = await response.json();
+                
+                if (data.status === 'completed' && data.response_data) {
+                    currentUuid = uuid;
+                    displayAnalysisResult(data.response_data);
+                } else if (data.status === 'not_found') {
+                    showError('해당 UUID의 분석 결과를 찾을 수 없습니다.');
+                } else if (data.status === 'processing') {
+                    showError('분석이 아직 진행 중입니다. 잠시 후 다시 시도해주세요.');
+                } else {
+                    showError('분석 결과를 불러올 수 없습니다.');
+                }
+            } catch (error) {
+                showError('분석 결과를 불러오는 중 오류가 발생했습니다.');
+            }
+        }
+        
+        // 분석 결과 표시 함수
+        function displayAnalysisResult(responseData) {
+            if (responseData.feasible) {
+                let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
+                content += generateArchitectureDiagram(responseData.services);
+                content += `<div class="cost-summary">`;
+                content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
+                content += `<p><strong>총 비용: $${responseData.total_cost.toFixed(2)}/월</strong></p>`;
+                content += `<p><strong>예산: $${responseData.budget.toFixed(2)}/월</strong></p>`;
+                content += `<p><strong>예산 활용률: ${responseData.budget_utilization.toFixed(1)}%</strong></p>`;
+                content += `<p style="color: #4CAF50;"><strong>절약 금액: $${responseData.savings.toFixed(2)}/월</strong></p>`;
+                
+                if (responseData.cost_breakdown) {
+                    content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
+                    content += `<h5>비용 분석</h5>`;
+                    content += `<p>• 컴퓨팅: $${responseData.cost_breakdown.compute.toFixed(2)}</p>`;
+                    content += `<p>• 스토리지: $${responseData.cost_breakdown.storage.toFixed(2)}</p>`;
+                    content += `<p>• 네트워킹: $${responseData.cost_breakdown.networking.toFixed(2)}</p>`;
+                    content += `<p>• 기타: $${responseData.cost_breakdown.other.toFixed(2)}</p>`;
+                    content += `</div>`;
+                }
+                
+                content += `</div>`;
+                showResult(content, true);
+            } else {
+                showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>${responseData.message}</p>`, false);
+            }
+            
+            // UUID 표시
+            if (currentUuid) {
+                document.getElementById('current-uuid').value = currentUuid;
+                document.getElementById('uuid-display').style.display = 'block';
+            }
+        }
+        
         // 서비스 폼 제출
         document.getElementById('estimateForm').addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -750,6 +919,7 @@
                     return;
                 }
                 
+                currentUuid = uuid;
                 pollResult(uuid);
             } catch (error) {
                 showError('오류가 발생했습니다.');
@@ -832,6 +1002,12 @@
                 if (costSummary) {
                     setTimeout(() => costSummary.classList.add('show'), serviceBlocks.length * 150 + 200);
                 }
+                
+                // UUID 표시
+                if (currentUuid) {
+                    document.getElementById('current-uuid').value = currentUuid;
+                    document.getElementById('uuid-display').style.display = 'block';
+                }
             }, 400);
         }
         
@@ -850,32 +1026,7 @@
                 const data = await response.json();
                 
                 if (data.status === 'completed') {
-                    if (data.response_data.feasible) {
-                        let content = '<h3><i class="fas fa-check-circle"></i> 분석 완료!</h3>';
-                        content += generateArchitectureDiagram(data.response_data.services);
-                        content += `<div class="cost-summary">`;
-                        content += `<h4><i class="fas fa-calculator"></i> 비용 요약</h4>`;
-                        content += `<p><strong>총 비용: $${data.response_data.total_cost.toFixed(2)}/월</strong></p>`;
-                        content += `<p><strong>예산: $${data.response_data.budget.toFixed(2)}/월</strong></p>`;
-                        content += `<p><strong>예산 활용률: ${data.response_data.budget_utilization.toFixed(1)}%</strong></p>`;
-                        content += `<p style="color: #4CAF50;"><strong>절약 금액: $${data.response_data.savings.toFixed(2)}/월</strong></p>`;
-                        
-                        // 비용 분석 추가
-                        if (data.response_data.cost_breakdown) {
-                            content += `<div style="margin-top: 1rem; padding: 1rem; background: rgba(255,255,255,0.1); border-radius: 8px;">`;
-                            content += `<h5>비용 분석</h5>`;
-                            content += `<p>• 컴퓨팅: $${data.response_data.cost_breakdown.compute.toFixed(2)}</p>`;
-                            content += `<p>• 스토리지: $${data.response_data.cost_breakdown.storage.toFixed(2)}</p>`;
-                            content += `<p>• 네트워킹: $${data.response_data.cost_breakdown.networking.toFixed(2)}</p>`;
-                            content += `<p>• 기타: $${data.response_data.cost_breakdown.other.toFixed(2)}</p>`;
-                            content += `</div>`;
-                        }
-                        
-                        content += `</div>`;
-                        showResult(content, true);
-                    } else {
-                        showResult(`<h3><i class="fas fa-exclamation-triangle"></i> 예산 부족</h3><p>예산을 초과했습니다. 예산을 늘리거나 요구사항을 조정해주세요.</p>`, false);
-                    }
+                    displayAnalysisResult(data.response_data);
                 } else if (data.status === 'failed') {
                     showError('처리 실패');
                 } else {
