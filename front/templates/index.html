@@ -696,9 +696,61 @@
                 
                 currentPlan = selectedPlan.type;
                 
+                // UI 테마 변경
+                updateUITheme(selectedPlan.type);
+                
                 alert(`${selectedPlan.name} 요금제로 변경되었습니다! (데모)`);
             }
             closePlanModal();
+        }
+        
+        // UI 테마 업데이트
+        function updateUITheme(planType) {
+            const body = document.body;
+            
+            if (planType === 'pro') {
+                body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)';
+                
+                // 카드 스타일 변경
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.style.background = 'linear-gradient(135deg, rgba(255,255,255,0.95) 0%, rgba(240,248,255,0.95) 100%)';
+                    card.style.boxShadow = '0 25px 50px rgba(102, 126, 234, 0.3), 0 0 0 1px rgba(255,255,255,0.1)';
+                });
+                
+                // 버튼 스타일 변경
+                const submitBtns = document.querySelectorAll('.submit-btn');
+                submitBtns.forEach(btn => {
+                    btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 50%, #f093fb 100%)';
+                    btn.style.boxShadow = '0 8px 32px rgba(102, 126, 234, 0.4)';
+                });
+                
+                // 결과 카드 스타일 변경
+                const results = document.querySelectorAll('.result.success');
+                results.forEach(result => {
+                    result.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 50%, #88d8c0 100%)';
+                });
+            } else {
+                // Free 테마로 복원
+                body.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                
+                const cards = document.querySelectorAll('.card');
+                cards.forEach(card => {
+                    card.style.background = 'white';
+                    card.style.boxShadow = '0 20px 40px rgba(0,0,0,0.1)';
+                });
+                
+                const submitBtns = document.querySelectorAll('.submit-btn');
+                submitBtns.forEach(btn => {
+                    btn.style.background = 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)';
+                    btn.style.boxShadow = '0 10px 25px rgba(102, 126, 234, 0.3)';
+                });
+                
+                const results = document.querySelectorAll('.result.success');
+                results.forEach(result => {
+                    result.style.background = 'linear-gradient(135deg, #56ab2f 0%, #a8e6cf 100%)';
+                });
+            }
         }
         
         // 모달 닫기
@@ -1213,6 +1265,9 @@
             setTimeout(() => {
                 resultDiv.classList.add('show');
                 
+                // 현재 테마 적용
+                updateUITheme(currentPlan);
+                
                 // 서비스 스택들 순차 애니메이션
                 const serviceStacks = resultDiv.querySelectorAll('.service-stack');
                 serviceStacks.forEach((stack, index) => {
@@ -1501,6 +1556,7 @@
         // 페이지 로드 시 Free 요금제 기본 선택
         document.addEventListener('DOMContentLoaded', function() {
             document.querySelector('.pricing-card.free').classList.add('selected');
+            updateUITheme(currentPlan);
         });
     </script>
 </body>
